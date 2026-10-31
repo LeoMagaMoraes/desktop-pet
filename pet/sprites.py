@@ -3,6 +3,7 @@
 Procura, nesta ordem:
   sprites/<fase>/<animacao>/*.png   (fases: ovo, filhote, clawd, anciao)
   sprites/<animacao>/*.png          (só pra fase clawd, o adulto)
+  sprites/<bicho>/...               (o mesmo esquema pros outros pets, ex.: sprites/dragao/)
   desenho provisório de pixelart.py
 Os PNGs são lidos em ordem alfabética e devem estar virados pra direita.
 Um anim.json opcional na pasta define a velocidade: {"ms": 120}
@@ -34,17 +35,19 @@ def criar_imagens_efeito(root, escala):
 
 
 class BibliotecaSprites:
-    def __init__(self, root, escala, pasta, fase="clawd"):
+    def __init__(self, root, escala, pasta, fase="clawd", roupas=frozenset(), especie="clawd"):
         self.root = root
         self.escala = escala
         self.pasta = pasta
         self.fase = fase
+        self.especie = especie
+        self.roupas = frozenset(roupas)   # roupas do clima (só no desenho provisório)
         self._de_grade = {}      # id(grade) -> imagem (quadros repetidos usam a mesma)
         self._espelhadas = {}    # id(imagem) -> imagem virada pra esquerda
         self.usando_png = set()
         self.animacoes = {}      # nome -> (ms, quadros_direita, quadros_esquerda)
 
-        for nome, (ms, grades) in pixelart.animacoes(fase).items():
+        for nome, (ms, grades) in pixelart.animacoes(fase, self.roupas, especie).items():
             png = self._carregar_pngs(nome)
             if png:
                 quadros, ms = png[0], png[1] or ms
@@ -68,14 +71,14 @@ class BibliotecaSprites:
         """Distância dos pés ao topo da cabeça, em pixels de tela."""
         if "parado" in self.usando_png:
             return round(self.animacoes["parado"][1][0].height() * 0.9)
-        return pixelart.medidas(self.fase)[0] * self.escala
+        return pixelart.medidas(self.fase, self.especie)[0] * self.escala
 
     @property
     def meia_largura(self):
         """Metade da largura do corpo com os bracinhos (pra bater nas bordas)."""
         if "parado" in self.usando_png:
             return round(self.animacoes["parado"][1][0].width() * 0.4)
-        return pixelart.medidas(self.fase)[1] * self.escala
+        return pixelart.medidas(self.fase, self.especie)[1] * self.escala
 
     def quadro(self, nome, ms_desde_inicio, virado_esquerda=False):
         """Imagem da animação no instante pedido."""
@@ -96,9 +99,11 @@ class BibliotecaSprites:
         return self._espelhadas[id(img)]
 
     def _carregar_pngs(self, nome):
-        pastas = [self.pasta / self.fase / nome]
-        if self.fase == "clawd":
-            pastas.append(self.pasta / nome)
+        # O Clawd usa sprites/ direto; os outros bichos, sprites/<bicho>/
+        raiz = self.pasta if self.especie == "clawd" else self.pasta / self.especie
+        pastas = [raiz / self.fase / nome]
+        if self.fase == "clawd":                     # adulto também aceita as pastas soltas
+            pastas.append(raiz / nome)
         for pasta in pastas:
             arquivos = sorted(pasta.glob("*.png")) if pasta.is_dir() else []
             if not arquivos:

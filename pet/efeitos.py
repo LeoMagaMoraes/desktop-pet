@@ -18,6 +18,7 @@ class Efeitos:
         self.estrelas = []
         self.angulo = 0.0
         self.moscas = []
+        self.ventilador = None      # item do ventiladorzinho (calor), ou None
         self.tempo = 0.0
 
     def _soltar(self, tipo, x, y, vx, vy, vida, gravidade=0.0, balanco=0.0):
@@ -47,11 +48,19 @@ class Efeitos:
         k = self.k
         self._soltar("bolha", x, y, random.uniform(-15, 15) * k, -35 * k, 0.9, balanco=4 * k)
 
-    def gotas(self, x, y, direcao):
+    def gotas(self, x, y, direcao, tipo="gota"):
+        """Espirro: gotinhas (ou faíscas, no dragão) saindo pra frente."""
         k = self.k
         for _ in range(4):
-            self._soltar("gota", x, y, direcao * random.uniform(60, 140) * k,
+            self._soltar(tipo, x, y, direcao * random.uniform(60, 140) * k,
                          random.uniform(-80, -10) * k, 0.6, gravidade=500 * k)
+
+    def fumaca(self, x, y):
+        """Nuvenzinha de fumaça (troca de pet)."""
+        k = self.k
+        for _ in range(8):
+            self._soltar("fumaca", x + random.uniform(-30, 30) * k, y + random.uniform(-20, 20) * k,
+                         random.uniform(-40, 40) * k, random.uniform(-60, -20) * k, 0.9, balanco=4 * k)
 
     def quantidade_moscas(self, n):
         """Deixa exatamente n mosquinhas voando em volta dele."""
@@ -59,6 +68,13 @@ class Efeitos:
             self.moscas.append(self.canvas.create_image(-50, -50, image=self.imagens["mosca"]))
         while len(self.moscas) > n:
             self.canvas.delete(self.moscas.pop())
+
+    def ventilador_ligado(self, ligar):
+        if ligar and self.ventilador is None:
+            self.ventilador = self.canvas.create_image(-50, -50, image=self.imagens["ventilador_a"])
+        elif not ligar and self.ventilador is not None:
+            self.canvas.delete(self.ventilador)
+            self.ventilador = None
 
     def estrelas_girando(self, ligar):
         if ligar and not self.estrelas:
@@ -97,6 +113,13 @@ class Efeitos:
                     self.canvas.tag_raise(item, self.item_sprite)
                 else:
                     self.canvas.tag_lower(item, self.item_sprite)
+
+        # Ventiladorzinho flutuando do lado da cabeça, com as pás girando
+        if self.ventilador is not None:
+            quadro = "ventilador_a" if int(self.tempo * 10) % 2 else "ventilador_b"
+            self.canvas.itemconfig(self.ventilador, image=self.imagens[quadro])
+            self.canvas.coords(self.ventilador, cabeca_x + 11 * 4 * self.k,
+                               cabeca_y + math.sin(self.tempo * 3) * 2 * self.k)
 
         # Mosquinhas: cada uma num zigue-zague diferente em volta do corpo
         rx, ry = 11 * 4 * self.k, 6 * 4 * self.k

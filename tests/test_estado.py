@@ -3,13 +3,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from clawd.estado import PADRAO, Estado
+from pet.estado import PADRAO, Estado
 
 
 class TestEstado(unittest.TestCase):
     def setUp(self):
         self.pasta = tempfile.TemporaryDirectory()
-        self.arquivo = Path(self.pasta.name) / "clawd.json"
+        self.arquivo = Path(self.pasta.name) / "pet.json"
 
     def tearDown(self):
         self.pasta.cleanup()
@@ -28,7 +28,7 @@ class TestEstado(unittest.TestCase):
         self.assertEqual(e2.status["fome"], 50)
         self.assertEqual(e2.dados["lugar_favorito"], {"x": 300, "y": 1020})
         self.assertIsNotNone(e2.dados["ultimo_save"])
-        self.assertFalse(self.arquivo.with_name("clawd.json.tmp").exists())
+        self.assertFalse(self.arquivo.with_name("pet.json.tmp").exists())
 
     def test_save_antigo_ganha_chaves_novas(self):
         self.arquivo.write_text(json.dumps({"status": {"fome": 10}, "xp": 50}), encoding="utf-8")
@@ -42,7 +42,7 @@ class TestEstado(unittest.TestCase):
         self.arquivo.write_text("{isso não é json", encoding="utf-8")
         e = Estado.carregar(self.arquivo)
         self.assertEqual(e.dados, PADRAO)
-        self.assertTrue(self.arquivo.with_name("clawd.json.corrompido").exists())
+        self.assertTrue(self.arquivo.with_name("pet.json.corrompido").exists())
 
     def test_status_fica_entre_0_e_100(self):
         e = Estado.carregar(self.arquivo)

@@ -1,4 +1,4 @@
-"""Roda o hooks/clawd_hook.py de verdade, mandando o JSON pela entrada como o Claude Code faz."""
+"""Roda o hooks/pet_hook.py de verdade, mandando o JSON pela entrada como o Claude Code faz."""
 
 import json
 import os
@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parent.parent / "hooks" / "clawd_hook.py"
+SCRIPT = Path(__file__).resolve().parent.parent / "hooks" / "pet_hook.py"
 
 
 def resposta(ident, entrada, saida, cache_leitura=0, ts="2026-10-30T12:00:00.000Z"):
@@ -29,7 +29,7 @@ class TestHook(unittest.TestCase):
         self.pasta.cleanup()
 
     def hook(self, dados, cru=None):
-        env = dict(os.environ, CLAWD_PASTA_CLAUDE=str(self.base))
+        env = dict(os.environ, PET_PASTA_CLAUDE=str(self.base))
         entrada = cru if cru is not None else json.dumps(dados).encode("utf-8")
         r = subprocess.run([sys.executable, str(SCRIPT)], input=entrada, capture_output=True,
                            env=env, timeout=30)
@@ -38,7 +38,7 @@ class TestHook(unittest.TestCase):
         return r
 
     def eventos(self):
-        log = self.base / "clawd-eventos.jsonl"
+        log = self.base / "pet-eventos.jsonl"
         if not log.exists():
             return []
         return [json.loads(l) for l in log.read_text(encoding="utf-8").splitlines()]
@@ -63,7 +63,7 @@ class TestHook(unittest.TestCase):
         self.assertEqual(fim["tokens_task"], {"entrada": 5, "saida": 300, "cache_criacao": 0,
                                               "cache_leitura": 1000})
         self.assertEqual(fim["tokens_sessao"]["saida"], 400)
-        status = json.loads((self.base / "clawd-status.json").read_text(encoding="utf-8"))
+        status = json.loads((self.base / "pet-status.json").read_text(encoding="utf-8"))
         self.assertEqual(status["id"], fim["id"])
 
     def test_fim_sem_prompt_nao_inventa_tokens_da_task(self):

@@ -3,7 +3,7 @@
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import config, necessidades, tokens
+from . import config, especies, necessidades, tokens
 
 FUNDO = "#1F1E1D"
 TEXTO = "#F5F0E8"
@@ -45,7 +45,7 @@ class Painel:
             self.janela.lift()
             return
         j = self.janela = tk.Toplevel(self.m.root)
-        j.title("Status do Clawd")
+        j.title(f"Status do {especies.especie(self.m.especie).nome}")
         j.attributes("-toolwindow", True)
         j.attributes("-topmost", True)
         j.resizable(False, False)
@@ -91,7 +91,7 @@ class Painel:
         # Fase e XP
         fase = self.m.fase
         c.create_text(pad, y, anchor="nw", fill=TEXTO, font=self.fonte_titulo,
-                      text=f"{necessidades.NOMES_FASE[fase]}  ·  ⭐ {d['xp']} XP")
+                      text=f"{especies.nome_fase(self.m.especie, fase)}  ·  ⭐ {d['xp']} XP")
         y += self.linha_h + e
         proxima = necessidades.proxima_fase(d["xp"])
         if proxima:
@@ -101,7 +101,7 @@ class Painel:
             self._barra(pad, y, self.largura - 2 * pad, fracao, LARANJA)
             y += self.seg_h + e
             c.create_text(pad, y, anchor="nw", fill=APAGADO, font=self.fonte_peq,
-                          text=f"Faltam {alvo - d['xp']} XP pra virar {necessidades.NOMES_FASE[nome]}")
+                          text=f"Faltam {alvo - d['xp']} XP pra virar {especies.nome_fase(self.m.especie, nome)}")
         else:
             c.create_text(pad, y, anchor="nw", fill=APAGADO, font=self.fonte_peq, text="Fase máxima! 👑")
         y += self.linha_h + 2 * e

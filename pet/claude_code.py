@@ -10,7 +10,7 @@ import threading
 import time
 from datetime import date, datetime, timedelta
 
-from . import config, sons, tela, tokens
+from . import config, especies, sons, tela, tokens
 
 log = logging.getLogger(__name__)
 
@@ -29,8 +29,8 @@ class ClaudeCode:
         self.m = mascote
         self.d = mascote.estado.dados["claude"]
         base = tokens.pasta_claude()
-        self.arq_eventos = base / "clawd-eventos.jsonl"
-        self.arq_status = base / "clawd-status.json"
+        self.arq_eventos = base / "pet-eventos.jsonl"
+        self.arq_status = base / "pet-status.json"
         # Começa do fim do log: eventos de antes de abrir o Clawd não contam
         try:
             self.offset = self.arq_eventos.stat().st_size
@@ -274,14 +274,18 @@ class ClaudeCode:
             dia["testes_falha"] += 1
             if self._livre():
                 m.mudar("caido", 4)
-            m.falar("💀 Os testes falharam...", 3)
+            m.falar(self._frase("teste_falhou", "💀 Os testes falharam..."), 3)
             self._som("triste")
 
     def _reagir_erro(self):
         self._hoje()["erros"] += 1
         if self._livre():
             self.m.mudar("mao_na_cabeca", 2.5)
-        self.m.falar("Ops! Deu erro no terminal 🤦", 2)
+        self.m.falar(self._frase("erro", "Ops! Deu erro no terminal 🤦"), 2.5)
+
+    def _frase(self, chave, padrao):
+        """Fala do jeito do pet (o patinho de borracha, por exemplo, pede pra você explicar o bug)."""
+        return especies.especie(self.m.especie).frases.get(chave, padrao)
 
     def _som(self, nome):
         if self.d["sons"]:

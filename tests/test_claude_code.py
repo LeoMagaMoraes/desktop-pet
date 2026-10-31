@@ -142,7 +142,7 @@ class TestClaudeCode(BaseMascote):
 
 class TestEventosAntigos(BaseMascote):
     def antes_de_criar(self):
-        (self.claude / "clawd-eventos.jsonl").write_text(json.dumps({"evento": "fim"}) + "\n",
+        (self.claude / "pet-eventos.jsonl").write_text(json.dumps({"evento": "fim"}) + "\n",
                                                           encoding="utf-8")
 
     def test_ignora_o_que_aconteceu_antes_de_abrir(self):

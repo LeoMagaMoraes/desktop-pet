@@ -10,9 +10,11 @@ import time
 import tkinter as tk
 from tkinter import simpledialog
 
-from . import config, fisica, interacao, necessidades, tela, tokens
+from . import config, especies, fisica, interacao, necessidades, sons, tela, tokens
 from .balao import Balao
+from .chuva import ChuvaNaTela
 from .claude_code import ClaudeCode
+from .clima_controle import ControleClima
 from .efeitos import Efeitos
 from .estado import Estado
 from .menu import MenuClawd
@@ -27,11 +29,11 @@ FALAS_CARINHO = ["Hehe ♥", "Gostei!", "Mais!", "♥"]
 
 
 class Mascote:
-    def __init__(self, demo=False, arquivo_estado=config.ARQUIVO_ESTADO, fase_demo=None):
+    def __init__(self, demo=False, arquivo_estado=config.ARQUIVO_ESTADO, fase_demo=None, pet_demo=None):
         tela.ativar_dpi()   # precisa vir antes de criar o Tk
         self.root = tk.Tk()
         self.root.withdraw()
-        self.root.title("Clawd")
+        self.root.title("Pet")
         self.root.report_callback_exception = self._erro_em_callback
         if config.ARQUIVO_ICONE.exists():
             self.root.iconbitmap(default=str(config.ARQUIVO_ICONE))   # ícone do painel e dos diálogos
@@ -40,6 +42,9 @@ class Mascote:
         self.escala = config.escala_para_dpi(self.root.winfo_fpixels("1i"))
         self.k = self.escala / 4        # multiplica velocidades pensadas pra escala 4
         self.estado = Estado.carregar(arquivo_estado)
+        if pet_demo:
+            especies.trocar(self.estado.dados, pet_demo)    # demo de outro pet (não salva)
+        self.especie = especies.atual(self.estado.dados)
 
         # Fase de evolução: a do save, corrigida se o XP não bater
         fase = self.estado.dados.get("fase")
@@ -47,7 +52,11 @@ class Mascote:
             fase = necessidades.fase_por_xp(self.estado.dados["xp"])
         self.fase = fase_demo or fase
         self._fase_pendente = None      # fase que vem depois de chocar
+        self._renascendo = False        # fênix voltando das cinzas
+        self._renasceu_em = 0.0
+        self._ultimo_som_clique = 0.0
         self._bibliotecas = {}
+        self.roupas = frozenset()       # roupas do clima que ele está usando
         self.sprites = self._biblioteca(self.fase)
         self.imagens_efeito = criar_imagens_efeito(self.root, self.escala)
         self.monitores = tela.monitores(self.root)
@@ -93,6 +102,9 @@ class Mascote:
         # Necessidades, avisos e XP (precisa do save ainda sem o horário novo)
         self.tama = Tamagotchi(self)
         self.cc = ClaudeCode(self)      # eventos dos hooks e tokens
+        self.chuva = ChuvaNaTela(self.root, config.COR_CHAVE, self.escala)
+        self.clima = ControleClima(self)
+        self.vestir(self.clima.roupas())   # já abre com a roupa do último clima conhecido
         self.painel = Painel(self)
 
     # ------------------------------------------------------------------ montagem
@@ -138,6 +150,17 @@ class Mascote:
         except ValueError:
             self.falar("Não entendi esse número 🤔\nTenta algo como 150M", 3)
 
+    def _perguntar_cidade(self):
+        d = self.clima.d
+        atual = d.get("nome_exibido") or d.get("cidade") or ""
+        texto = simpledialog.askstring(
+            "Cidade do clima", "De que cidade ele olha o céu?\nExemplos: Florianópolis, SC  ·  Recife, PE",
+            initialvalue=atual, parent=self.root)
+        if texto and not self.clima.trocar_cidade(texto):
+            self.falar("Não entendi essa cidade 🤔", 2)
+        elif texto:
+            self.salvar()
+
     def _reinstalar_hooks(self):
         # Roda o instalador numa thread e conta o resultado no balão
         script = config.PASTA_BASE / "instalar_hooks.py"
@@ -150,9 +173,21 @@ class Mascote:
         threading.Thread(target=rodar, daemon=True).start()
 
     def _biblioteca(self, fase):
-        if fase not in self._bibliotecas:
-            self._bibliotecas[fase] = BibliotecaSprites(self.root, self.escala, config.PASTA_SPRITES, fase)
-        return self._bibliotecas[fase]
+        chave = (self.especie, fase, self.roupas)
+        if chave not in self._bibliotecas:
+            self._bibliotecas[chave] = BibliotecaSprites(self.root, self.escala, config.PASTA_SPRITES,
+                                                         fase, self.roupas, self.especie)
+        return self._bibliotecas[chave]
+
+    def vestir(self, roupas):
+        """Troca as roupas do clima (redesenha os quadros só quando muda)."""
+        roupas = frozenset(roupas)
+        if roupas == self.roupas:
+            return
+        self.roupas = roupas
+        self.sprites = self._biblioteca(self.fase)
+        self._ajustar_janela()
+        self._img_atual = None
 
     def _limites(self):
         a = self.area
@@ -231,6 +266,7 @@ class Mascote:
         self.salvar()
         self.painel.fechar()
         self.menu.fechar()
+        self.chuva.desligar()
         # Cancela os loops agendados pra não sobrar callback apontando pra janela fechada.
         # Cada um no seu try: se um falhar, o destroy ainda tem que acontecer.
         try:
@@ -258,9 +294,12 @@ class Mascote:
         self.root.after(config.AUTOSAVE_MS, self._autosave)
 
     def _manter_por_cima(self):
-        # A barra de tarefas às vezes passa na frente; reforça o topmost
-        for janela in (self.root, self.balao.janela):
+        # A barra de tarefas às vezes passa na frente; reforça o topmost.
+        # A ordem importa: a chuva fica embaixo do Clawd e do balão.
+        janelas = ([self.chuva.janela] if self.chuva.ativa else []) + [self.root, self.balao.janela]
+        for janela in janelas:
             janela.attributes("-topmost", True)
+            janela.lift()
         self.root.after(config.TOPMOST_MS, self._manter_por_cima)
 
     def _reler_area(self):
@@ -301,6 +340,9 @@ class Mascote:
             return
         if self.cc.empanturrado and random.random() < 0.4:
             self.mudar("empanturrado", random.uniform(3, 6))   # cheio de tokens, fica molenga
+            return
+        if self.tama.ativo and self.clima.efeitos()["dorminhoco"] and random.random() < 0.1:
+            self.tama.cochilar(random.uniform(60, 150))           # chuva dá preguiça
             return
         r = random.random()
         if r < 0.55:
@@ -366,6 +408,7 @@ class Mascote:
 
     def acordar(self, texto="Que soneca boa!"):
         self.tama.acordado_em = time.time()
+        self.tama.cochilo_ate = None
         self.mudar("parado", 2)
         self.falar(texto, 2)
 
@@ -381,11 +424,55 @@ class Mascote:
         self.salvar()
 
     def espirrar(self):
+        tipo = especies.especie(self.especie).espirro     # dragão espirra faísca, tubarão bolhas
         self.mudar("espirrando", 1.2)
-        self.falar("Atchim! 🤧", 1.2)
+        self.falar("Atchim! " + {"fogo": "🔥", "bolha": "💦", "floco": "❄", "pena": "🪶"}.get(tipo, "🤧"), 1.2)
         self.root.after(300, lambda: self.efeitos.gotas(
             self.larg_janela / 2 + 4 * self.escala * self.direcao,
-            self.alt_janela - self.sprites.altura_corpo / 2, self.direcao))
+            self.alt_janela - self.sprites.altura_corpo / 2, self.direcao, tipo))
+
+    # ------------------------------------------------------------------ pets
+
+    def trocar_pet(self, novo):
+        """Guarda o pet atual (pausado) e traz o outro, numa nuvenzinha de fumaça."""
+        if self.acao in ("pendurado", "caindo") or not especies.trocar(self.estado.dados, novo):
+            return
+        self.especie = novo
+        self.fase = self.estado.dados["fase"]
+        self._fase_pendente = None
+        self.tonto_pendente = False
+        self.efeitos.estrelas_girando(False)
+        self.tama.ao_trocar_pet()
+        self.sprites = self._biblioteca(self.fase)
+        self._ajustar_janela()
+        self._img_atual = None
+        self.efeitos.fumaca(self.larg_janela / 2, self.alt_janela - self.sprites.altura_corpo / 2)
+        esp = especies.especie(novo)
+        self.mudar("acenando", 2.5)
+        if self.fase == "ovo":
+            self.falar(f"Um {esp.nomes_fase['ovo'].lower()}! 🥚\nFaz carinho pra ele chocar", 4)
+        else:
+            self.falar(f"Oi de novo! Sou {esp.apresentacao} {esp.emoji}", 3)
+        self.salvar()
+
+    def renascer(self):
+        """Fênix com a felicidade zerada: vira cinzas, volta pro ovo e renasce (o XP fica)."""
+        d = self.estado.dados
+        d["fase"] = self.fase = "ovo"
+        d["status"].update(fome=100, energia=100, felicidade=100)
+        d.update(doente=False, sujeira=0, horas_com_fome=0.0)
+        self._renascendo = True
+        self._renasceu_em = time.perf_counter()
+        self.sprites = self._biblioteca(self.fase)
+        self._ajustar_janela()
+        self._img_atual = None
+        centro_y = self.alt_janela - self.sprites.altura_corpo / 2
+        for direcao in (-1, 1, -1, 1):
+            self.efeitos.gotas(self.larg_janela / 2, centro_y, direcao, "fogo")
+        self.efeitos.fumaca(self.larg_janela / 2, centro_y)
+        self.mudar("parado", 2)
+        self.falar("🔥 Virei cinzas...\nmas eu vou renascer!", 3)
+        self.salvar()
 
     def bolha_em(self, x_tela, y_tela):
         """Bolha de sabão onde o mouse está esfregando."""
@@ -402,6 +489,8 @@ class Mascote:
         ordem = necessidades.ORDEM_FASE
         if self.demo or ordem[nova] <= ordem[self.fase] or self.acao not in ("parado", "andando"):
             return
+        if self._renascendo and time.perf_counter() - self._renasceu_em < 3:
+            return          # deixa as cinzas aparecerem antes de chocar de novo
         if self.fase == "ovo":
             # Primeiro a casca racha, depois ele nasce (_fim_da_acao chama _evoluir)
             self._fase_pendente = nova
@@ -418,10 +507,14 @@ class Mascote:
         self._ajustar_janela()
         self._img_atual = None
         self.mudar("comemorando", 3)
-        if antiga == "ovo":
-            self.falar("Nasci! 🐣\nOi, eu sou o Clawd!", 4)
+        esp = especies.especie(self.especie)
+        if antiga == "ovo" and self._renascendo:
+            self._renascendo = False
+            self.falar(f"Renasci das cinzas! {esp.emoji}✨", 4)
+        elif antiga == "ovo":
+            self.falar(f"Nasci! 🐣\nOi, eu sou {esp.apresentacao}! {esp.emoji}", 4)
         else:
-            self.falar(f"Evoluí! Agora sou\n{necessidades.NOMES_FASE[nova]}! ✨", 4)
+            self.falar(f"Evoluí! Agora sou\n{esp.nomes_fase[nova]}! ✨", 4)
         self.salvar()
 
     def _ajustar_janela(self):
@@ -436,7 +529,7 @@ class Mascote:
             self._pos_janela = None
 
     def mostrar_clima(self):
-        self.falar("Ainda não sei olhar o céu...\n(o clima chega na fase 4) ☁️", 4)
+        self.clima.mostrar()
 
     # ------------------------------------------------------------------ mouse
 
@@ -511,7 +604,17 @@ class Mascote:
             return
         self.efeitos.coracao(self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala)
         self.tama.carinho()
-        if random.random() < 0.3:
+        esp = especies.especie(self.especie)
+        agora = time.perf_counter()
+        if esp.som_clique and self.estado.dados["claude"]["sons"] and agora - self._ultimo_som_clique > 0.6:
+            self._ultimo_som_clique = agora
+            sons.tocar(esp.som_clique)               # quack!
+        texto = self.clima.texto_clique()        # clicar nele mostra a temperatura
+        if "clique" in esp.frases and random.random() < 0.35:
+            self.falar(esp.frases["clique"], 1.5)
+        elif texto:
+            self.falar(texto, 2)
+        elif random.random() < 0.3:
             self.falar(random.choice(FALAS_CARINHO), 1.5)
 
     def _abrir_menu(self, e):
@@ -563,6 +666,8 @@ class Mascote:
 
         self.tama.tick()
         self.cc.tick()
+        self.clima.tick()
+        self.chuva.atualizar(dt)
         self.efeitos.atualizar(dt, self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala,
                                self.alt_janela - self.sprites.altura_corpo / 2)
 
@@ -571,6 +676,9 @@ class Mascote:
         velocidade = config.VELOCIDADE_ANDAR * self.k
         if self.tama.ativo and (self.estado.dados["doente"] or self.estado.status["energia"] < 30):
             velocidade *= 0.5      # cansado ou gripado anda devagar
+        tempo = self.clima.vigente()
+        if tempo and tempo.categoria == "neblina":
+            velocidade *= 0.5      # na neblina vai devagarinho
         self.corpo.x += self.direcao * velocidade * dt
         # Vira quando chega na borda da tela
         if self.corpo.x - lim.meia_largura <= lim.esquerda:
@@ -645,6 +753,7 @@ class Mascote:
         ("caido", "caído 💀 (teste falhou)"),
         ("mao_na_cabeca", "facepalm 🤦 (erro no terminal)"),
         ("empanturrado", "empanturrado 😪 (meta de tokens)"),
+        ("tremendo", "tremendo 😱 (trovoada)"),
         ("chocando", "chocando 🥚"),
     ]
 

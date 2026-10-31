@@ -8,7 +8,7 @@ Fecha com Esc, clicando fora ou escolhendo uma opção.
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import necessidades, pixelart, tela, tokens
+from . import especies, necessidades, pixelart, tela, tokens
 from .sprites import grade_para_imagem
 
 FUNDO = "#262422"
@@ -47,7 +47,7 @@ class MenuClawd:
         escala_icone = max(2, e - 2)
         self.icones = {nome: grade_para_imagem(root, g, escala_icone) for nome, g in pixelart.ICONES.items()}
         self.largura = 64 * e
-        self._retrato = {}               # miniatura do Clawd de cada fase pro cabeçalho
+        self._retratos = {}              # miniatura de cada bicho em cada fase
 
     # ------------------------------------------------------------------ abrir e fechar
 
@@ -114,7 +114,8 @@ class MenuClawd:
         self.corpo.pack(padx=1, pady=1, fill="both")
         tk.Frame(self.corpo, width=self.largura, height=0, bg=FUNDO).pack()   # largura mínima
         {"principal": self._pagina_principal, "monitor": self._pagina_monitor,
-         "claude": self._pagina_claude}[self.pagina]()
+         "claude": self._pagina_claude, "clima": self._pagina_clima,
+         "pets": self._pagina_pets}[self.pagina]()
         self._posicionar()
 
     def _posicionar(self):
@@ -148,7 +149,9 @@ class MenuClawd:
 
         self._secao("VER")
         self._item("grafico", "Status e tokens", m.mostrar_status)
-        self._item("nuvem", "Clima", m.mostrar_clima)
+        temperatura = m.clima.rotulo()
+        self._item("nuvem", "Clima", m.mostrar_clima,
+                   direita=(lambda pai: self._etiqueta(pai, temperatura, TEXTO)) if temperatura else None)
 
         self._secao("AJUSTES")
         n = len(m.monitores)
@@ -156,6 +159,12 @@ class MenuClawd:
                    direita=lambda pai: self._etiqueta(pai, f"{n} ligado{'s' if n > 1 else ''}  ›"))
         self._item("clawd", "Claude Code", lambda: self._ir("claude"), fecha=False,
                    direita=lambda pai: self._etiqueta(pai, "›"))
+        cidade = m.clima.d.get("nome_exibido") or m.clima.d.get("cidade") or ""
+        self._item("sol", "Clima e cidade", lambda: self._ir("clima"), fecha=False,
+                   direita=lambda pai: self._etiqueta(pai, f"{cidade}  ›"))
+        esp = especies.especie(m.especie)
+        self._item(esp.icone, "Trocar de pet", lambda: self._ir("pets"), fecha=False,
+                   direita=lambda pai: self._etiqueta(pai, f"{esp.nome}  ›"))
         ligado = m.estado.dados["modo_tamagotchi"]
         self._chave("ovo", "Modo Tamagotchi", ligado, lambda: m.tama.mudar_modo(not ligado))
 
@@ -192,6 +201,52 @@ class MenuClawd:
         self._nota(f"Últimos 7 dias: {semana}  ·  sessão: {sessao}\n"
                    "Uso deste PC, não o limite do plano (veja /usage).")
 
+    def _pagina_pets(self):
+        """Um item por bicho, com a miniatura dele na fase em que está."""
+        m = self.m
+        self._voltar("Trocar de pet")
+        for esp in especies.ESPECIES.values():
+            resumo = especies.resumo_do_pet(m.estado.dados, esp.id)
+            fase, xp = resumo if resumo else ("ovo", 0)
+            agora = esp.id == m.especie
+            if agora:
+                legenda, cor = "● agora", LARANJA
+            elif resumo:
+                legenda, cor = f"{especies.nome_fase(esp.id, fase)} · {xp} XP", APAGADO
+            else:
+                legenda, cor = "novo! 🥚", VERDE
+            self._linha(None, f"{esp.nome} {esp.emoji}", lambda novo=esp.id: self._escolher_pet(novo),
+                        negrito=agora, imagem=self._retrato(esp.id, fase),
+                        direita=lambda pai, t=legenda, c=cor: self._etiqueta(pai, t, c))
+        self._nota("Cada pet tem o próprio XP e as próprias necessidades. Quem não está na tela "
+                   "fica guardado, pausado, até você trocar de volta.")
+
+    def _escolher_pet(self, novo):
+        self.fechar()
+        if novo != self.m.especie:
+            self.m.root.after(10, lambda: self.m.trocar_pet(novo))
+
+    def _pagina_clima(self):
+        m = self.m
+        cl = m.clima
+        d = cl.d
+        self._voltar("Clima")
+        cidade = d.get("nome_exibido") or d.get("cidade") or "?"
+        estado = d.get("estado") or ""
+        self._item("nuvem", "Ver o tempo agora", m.mostrar_clima,
+                   direita=lambda pai: self._etiqueta(pai, cl.rotulo(), TEXTO))
+        self._item("alvo", "Trocar cidade", m._perguntar_cidade,
+                   direita=lambda pai: self._etiqueta(pai, cidade))
+        self._chave("nuvem", "Gotas de chuva na tela", d.get("chuva_na_tela", True),
+                    lambda: d.__setitem__("chuva_na_tela", not d.get("chuva_na_tela", True)))
+        self._item("plugue", "Atualizar agora", cl.atualizar_agora)
+        quando = (d.get("atualizado") or "")[11:16]
+        nota = f"{cidade}{', ' + estado if estado else ''}"
+        nota += f" · atualizado às {quando}" if quando else " · ainda buscando..."
+        if cl.erro:
+            nota += "\nSem internet agora: usando o último clima."
+        self._nota(nota + "\nDados do Open-Meteo, a cada 30 minutos.")
+
     # ------------------------------------------------------------------ peças
 
     def _cabecalho(self):
@@ -200,17 +255,17 @@ class MenuClawd:
         d = m.estado.dados
         topo = tk.Frame(self.corpo, bg=FUNDO, padx=e, pady=e)
         topo.pack(fill="x")
-        tk.Label(topo, image=self._retrato_da_fase(), bg=FUNDO).pack(side="left", padx=(0, 2 * e))
+        tk.Label(topo, image=self._retrato(m.especie, m.fase), bg=FUNDO).pack(side="left", padx=(0, 2 * e))
         textos = tk.Frame(topo, bg=FUNDO)
         textos.pack(side="left", fill="x", expand=True)
-        tk.Label(textos, text=necessidades.NOMES_FASE[m.fase], font=self.fonte_titulo, fg=TEXTO,
+        tk.Label(textos, text=especies.nome_fase(m.especie, m.fase), font=self.fonte_titulo, fg=TEXTO,
                  bg=FUNDO, anchor="w").pack(fill="x")
         proxima = necessidades.proxima_fase(d["xp"])
         if proxima:
             nome, alvo = proxima
             inicio = necessidades.xp_minimo(m.fase)
             fracao = (d["xp"] - inicio) / max(1, alvo - inicio)
-            legenda = f"⭐ {d['xp']} XP  ·  {alvo - d['xp']} pra {necessidades.NOMES_FASE[nome]}"
+            legenda = f"⭐ {d['xp']} XP  ·  {alvo - d['xp']} pra {especies.nome_fase(m.especie, nome)}"
         else:
             fracao, legenda = 1.0, f"⭐ {d['xp']} XP  ·  fase máxima!"
         tk.Label(textos, text=legenda, font=self.fonte_pequena, fg=APAGADO, bg=FUNDO,
@@ -223,12 +278,13 @@ class MenuClawd:
             self._nota("Modo Tamagotchi desligado: status pausados.")
         self._separador()
 
-    def _retrato_da_fase(self):
-        fase = self.m.fase
-        if fase not in self._retrato:
-            grade = pixelart.animacoes(fase)["parado"][1][0]
-            self._retrato[fase] = grade_para_imagem(self.m.root, grade, max(2, self.e // 2))
-        return self._retrato[fase]
+    def _retrato(self, especie, fase):
+        """Miniatura do bicho parado na fase dele (cabeçalho e página de pets)."""
+        chave = (especie, fase)
+        if chave not in self._retratos:
+            grade = pixelart.animacoes(fase, especie=especie)["parado"][1][0]
+            self._retratos[chave] = grade_para_imagem(self.m.root, grade, max(2, self.e // 2))
+        return self._retratos[chave]
 
     def _secao(self, texto):
         tk.Label(self.corpo, text=texto, font=self.fonte_secao, fg=SECAO, bg=FUNDO, anchor="w",
@@ -259,12 +315,13 @@ class MenuClawd:
                  width=3, anchor="e").pack(side="left")
         return quadro
 
-    def _linha(self, icone, texto, ao_clicar, negrito=False, destaque_cor=DESTAQUE, direita=None):
-        """Uma linha clicável com ícone, texto e algo opcional na direita."""
+    def _linha(self, icone, texto, ao_clicar, negrito=False, destaque_cor=DESTAQUE, direita=None, imagem=None):
+        """Uma linha clicável com ícone (ou outra imagem), texto e algo opcional na direita."""
         e = self.e
         linha = tk.Frame(self.corpo, bg=FUNDO, padx=2 * e, pady=e, cursor="hand2")
         linha.pack(fill="x")
-        tk.Label(linha, image=self.icones[icone], bg=FUNDO, width=6 * e).pack(side="left")
+        tk.Label(linha, image=imagem or self.icones[icone], bg=FUNDO,
+                 width=imagem.width() if imagem else 6 * e).pack(side="left")
         tk.Label(linha, text=texto, font=self.fonte_negrito if negrito else self.fonte, fg=TEXTO,
                  bg=FUNDO, anchor="w", padx=2 * e).pack(side="left", fill="x", expand=True)
         if direita is not None:

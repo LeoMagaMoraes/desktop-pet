@@ -1,11 +1,11 @@
-"""Instala (ou remove) os hooks do Clawd em %USERPROFILE%\\.claude\\settings.json.
+"""Instala (ou remove) os hooks do pet em %USERPROFILE%\\.claude\\settings.json.
 
 Uso:
   python instalar_hooks.py            instala/atualiza
-  python instalar_hooks.py --remover  tira só os hooks do Clawd
+  python instalar_hooks.py --remover  tira só os hooks do pet
 
 Mantém todo o resto do settings.json (outros hooks inclusive) e guarda um
-backup em settings.json.bak-clawd antes da primeira mudança.
+backup em settings.json.bak-pet antes da primeira mudança.
 Rode de novo se mudar a pasta do projeto ou a versão do Python.
 """
 
@@ -15,10 +15,10 @@ import shutil
 import sys
 from pathlib import Path
 
-from clawd.tokens import pasta_claude
+from pet.tokens import pasta_claude
 
-SCRIPT = Path(__file__).resolve().parent / "hooks" / "clawd_hook.py"
-MARCA = "clawd_hook.py"   # como a gente reconhece os nossos hooks
+SCRIPT = Path(__file__).resolve().parent / "hooks" / "pet_hook.py"
+MARCAS = ("pet_hook.py", "clawd_hook.py")   # como a gente reconhece os nossos hooks (o 2º é o nome antigo)
 
 # evento -> matcher (None = evento sem matcher)
 EVENTOS = {
@@ -38,7 +38,8 @@ def python_sem_janela():
 
 
 def eh_nosso(handler):
-    return MARCA in json.dumps(handler)
+    texto = json.dumps(handler)
+    return any(marca in texto for marca in MARCAS)
 
 
 def remover_nossos(hooks):
@@ -80,7 +81,7 @@ def main():
             config = json.loads(arquivo.read_text(encoding="utf-8"))
         except ValueError as erro:
             sys.exit(f"settings.json está com JSON inválido, não mexi em nada: {erro}")
-        backup = arquivo.with_name("settings.json.bak-clawd")
+        backup = arquivo.with_name("settings.json.bak-pet")
         if not backup.exists():
             shutil.copy2(arquivo, backup)
             print(f"Backup: {backup}")
@@ -90,10 +91,10 @@ def main():
     if args.remover:
         if not hooks:
             del config["hooks"]
-        print("Hooks do Clawd removidos.")
+        print("Hooks do pet removidos.")
     else:
         adicionar_nossos(hooks, python_sem_janela(), str(SCRIPT))
-        print(f"Hooks do Clawd instalados ({', '.join(EVENTOS)}).")
+        print(f"Hooks do pet instalados ({', '.join(EVENTOS)}).")
         print(f"  {python_sem_janela()} {SCRIPT}")
 
     temporario = arquivo.with_name("settings.json.tmp-clawd")

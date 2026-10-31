@@ -1,7 +1,7 @@
 import unittest
 
-from clawd import tela
-from clawd.tela import Area, Monitor
+from pet import tela
+from pet.tela import Area, Monitor
 
 PRINCIPAL = Monitor("\\\\.\\DISPLAY1", 1, Area(0, 0, 1920, 1080), Area(0, 0, 1920, 1040), True)
 ESQUERDA = Monitor("\\\\.\\DISPLAY2", 2, Area(-1280, 100, 0, 1124), Area(-1280, 100, 0, 1084), False)

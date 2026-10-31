@@ -1,5 +1,9 @@
 __pycache__/
 *.pyc
+pet.json
+pet.json.*
+pet.log
+# nomes antigos, de quando era só o Clawd
 clawd.json
 clawd.json.*
 clawd.log

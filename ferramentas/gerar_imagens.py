@@ -4,8 +4,8 @@ Uso:  python ferramentas/gerar_imagens.py
 Precisa do Pillow (pip install pillow), só pra esta ferramenta; o Clawd em si não usa.
 
 Saída:
-  assets/clawd.ico       ícone do atalho (16, 32, 48, 64, 128 e 256 px, sem borrar)
-  assets/clawd.png       o mesmo ícone em 256 px
+  assets/pet.ico         ícone do atalho (16, 32, 48, 64, 128 e 256 px, sem borrar)
+  assets/pet.png         o mesmo ícone em 256 px
   docs/clawd.gif         Clawd animado pro topo do README
   docs/fases.png         ovo, filhote, Clawd e ancião lado a lado
   docs/reacoes.png       as reações ao Claude Code
@@ -19,7 +19,7 @@ from PIL import Image
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
-from clawd import pixelart  # noqa: E402
+from pet import pixelart  # noqa: E402
 
 
 def rgb(cor):
@@ -52,10 +52,10 @@ def gerar_icone():
     pasta.mkdir(exist_ok=True)
     tamanhos = [16, 32, 48, 64, 128, 256]
     imagens = [para_pil(pixelart.ICONE_APP, t // 16) for t in tamanhos]
-    imagens[-1].save(pasta / "clawd.ico", format="ICO", sizes=[(t, t) for t in tamanhos],
+    imagens[-1].save(pasta / "pet.ico", format="ICO", sizes=[(t, t) for t in tamanhos],
                      append_images=imagens[:-1])
-    imagens[-1].save(pasta / "clawd.png")
-    print("assets/clawd.ico e assets/clawd.png")
+    imagens[-1].save(pasta / "pet.png")
+    print("assets/pet.ico e assets/pet.png")
 
 
 def salvar_gif(quadros, caminho):
@@ -102,7 +102,27 @@ def gerar_docs():
     nomes = ["comendo", "digitando", "comemorando", "acenando", "caido", "mao_na_cabeca", "empanturrado"]
     reacoes = [para_pil(an[n][1][0], 6) for n in nomes]
     lado_a_lado(reacoes, 24).save(pasta / "reacoes.png")
-    print("docs/clawd.gif, docs/fases.png e docs/reacoes.png")
+
+    # Roupas do clima: sol, nublado, chuva, neve, frio, noite e trovoada (escondido tremendo)
+    looks = [{"oculos_sol"}, set(), {"guarda_chuva", "galochas"}, {"gorro", "cachecol"}, {"cachecol"},
+             {"pijama"}]
+    roupas = [para_pil(pixelart.animacoes("clawd", frozenset(r))["parado"][1][0], 6) for r in looks]
+    roupas.append(para_pil(an["tremendo"][1][0], 6))
+    lado_a_lado(roupas, 24).save(pasta / "roupas.png")
+    # A turma toda, adulta, lado a lado (topo do README)
+    turma = [para_pil(pixelart.animacoes("clawd", especie=b)["parado"][1][0], 5) for b in pixelart.BICHOS]
+    lado_a_lado(turma, 20).save(pasta / "turma.png")
+
+    # Outros pets: as quatro fases e algumas poses de cada um
+    for bicho in [b for b in pixelart.BICHOS if b != "clawd"]:
+        fases = [para_pil(pixelart.animacoes(f, especie=bicho)["parado"][1][0], escala) for f in pixelart.FASES]
+        lado_a_lado(fases, 4 * escala).save(pasta / f"{bicho}_fases.png")
+        ad = pixelart.animacoes("clawd", especie=bicho)
+        poses = [para_pil(ad[n][1][0], 6) for n in ("comemorando", "digitando", "acenando", "caido", "dormindo")]
+        poses.append(para_pil(pixelart.animacoes("clawd", frozenset({"guarda_chuva", "galochas"}), bicho)
+                              ["parado"][1][0], 6))
+        lado_a_lado(poses, 24).save(pasta / f"{bicho}_poses.png")
+    print("docs/clawd.gif, docs/fases.png, docs/reacoes.png, docs/roupas.png e as fases/poses dos pets")
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ import random
 import time
 from datetime import datetime
 
-from . import config, necessidades, tela
+from . import config, especies, necessidades, tela
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ class Tamagotchi:
         self._xp_quebrado = 0.0              # XP passivo acumulando até virar 1
         self._ultimo_carinho_xp = 0.0
         self.acordado_em = 0.0               # evita dormir de novo logo depois de acordar
+        self.cochilo_ate = None              # fim da soneca curta da chuva
         self._esfregar = None                # (t, x, y) do último movimento em cima dele
         self._esfregado = 0.0
         self._banho_de = 0.0                 # sujeira quando começou a esfregar
@@ -47,6 +48,13 @@ class Tamagotchi:
     def ativo(self):
         """Status só mudam com o modo ligado e depois de sair do ovo."""
         return self.ligado and self.m.fase != "ovo"
+
+    def ao_trocar_pet(self):
+        """O pet que chegou estava guardado: o tempo dele volta a contar só a partir de agora."""
+        self._ultimo = time.time()
+        self._xp_quebrado = 0.0
+        self.cochilo_ate = None
+        self._moscas()
 
     def mudar_modo(self, ligado):
         self.d["modo_tamagotchi"] = ligado
@@ -105,10 +113,18 @@ class Tamagotchi:
                 # O PC ficou suspenso com o programa aberto: conta como offline
                 eventos = necessidades.simular_offline(self.d, dt / 3600)
             else:
-                eventos = necessidades.passar_tempo(self.d, dt / 3600, dormindo, sozinho,
-                                                    mult_energia=self.m.cc.mult_energia())
+                tempo = self.m.clima.efeitos()       # sol, chuva e frio mexem nas necessidades
+                eventos = necessidades.passar_tempo(
+                    self.d, dt / 3600, dormindo, sozinho,
+                    mult_energia=self.m.cc.mult_energia() * tempo["mult_energia"],
+                    mult_fome=tempo["mult_fome"], bonus_felicidade=tempo["bonus_felicidade"])
             if "ficou_doente" in eventos:
                 self.m.falar("Atchim! Acho que fiquei gripado... 🤒", 3)
+            # Fênix sem nenhuma felicidade vira cinzas e renasce do ovo
+            # (abaixo de 1 conta como zerada: o sol pode ter devolvido um tiquinho)
+            if (especies.especie(self.m.especie).renasce and self.m.estado.status["felicidade"] < 1
+                    and self.m.acao not in ("pendurado", "caindo")):
+                self.m.renascer()
 
         # XP passivo enquanto você está por perto (o ovo choca mais rápido)
         if not sozinho and not dormindo and dt <= 120:
@@ -144,16 +160,26 @@ class Tamagotchi:
 
     def _sono(self, agora):
         m = self.m
+        # Na chuva ele fica preguiçoso: cochila com mais energia sobrando
+        limite = 30 if m.clima.efeitos()["dorminhoco"] else 15
         if m.acao == "dormindo":
             dormiu = time.perf_counter() - m.anim_inicio
-            if self.ativo:
+            if self.cochilo_ate is not None:
+                if agora >= self.cochilo_ate:
+                    m.acordar("Que preguiça... 🌧")
+            elif self.ativo:
                 if m.estado.status["energia"] >= 95 and dormiu >= 30:
                     m.acordar()
             elif dormiu >= 45:
                 m.acordar()
-        elif (self.ativo and m.estado.status["energia"] < 15 and m.acao in ("parado", "andando")
+        elif (self.ativo and m.estado.status["energia"] < limite and m.acao in ("parado", "andando")
               and agora - self.acordado_em > 120):
             m.dormir("💤 Não aguento mais...\nvou tirar um cochilo")
+
+    def cochilar(self, segundos):
+        """Soneca curta (chuva): acorda sozinho depois de `segundos`."""
+        self.m.dormir("Chuvinha dá um soninho... 😴")
+        self.cochilo_ate = time.time() + segundos
 
     def _avisos(self, agora):
         m = self.m

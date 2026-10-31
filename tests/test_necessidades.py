@@ -1,8 +1,8 @@
 import copy
 import unittest
 
-from clawd import necessidades as n
-from clawd.estado import PADRAO
+from pet import necessidades as n
+from pet.estado import PADRAO
 
 
 def dados(**status):

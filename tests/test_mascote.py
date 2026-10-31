@@ -21,18 +21,19 @@ class BaseMascote(unittest.TestCase):
     SAVE = {"fase": "clawd", "xp": 1000}
 
     def setUp(self):
-        from clawd.mascote import Mascote
+        from pet.mascote import Mascote
         self.pasta = tempfile.TemporaryDirectory()
         # ~/.claude de mentira, pra não ler os eventos e transcripts de verdade
         self.claude = Path(self.pasta.name) / "claude"
         self.claude.mkdir()
-        self._env_antigo = os.environ.get("CLAWD_PASTA_CLAUDE")
-        os.environ["CLAWD_PASTA_CLAUDE"] = str(self.claude)
+        self._env_antigo = os.environ.get("PET_PASTA_CLAUDE")
+        os.environ["PET_PASTA_CLAUDE"] = str(self.claude)
         self.antes_de_criar()
-        arquivo = Path(self.pasta.name) / "clawd.json"
+        arquivo = Path(self.pasta.name) / "pet.json"
         arquivo.write_text(json.dumps(self.SAVE), encoding="utf-8")
         self.m = Mascote(arquivo_estado=arquivo)
         self.m.estado.dados["claude"]["sons"] = False      # teste sem bipe
+        self.m.clima._prox_busca = float("inf")            # teste sem internet
         self.m.root.deiconify()
         self.m.root.update()
 
@@ -43,16 +44,16 @@ class BaseMascote(unittest.TestCase):
         self.m.painel.fechar()
         self.m.sair()
         if self._env_antigo is None:
-            os.environ.pop("CLAWD_PASTA_CLAUDE", None)
+            os.environ.pop("PET_PASTA_CLAUDE", None)
         else:
-            os.environ["CLAWD_PASTA_CLAUDE"] = self._env_antigo
+            os.environ["PET_PASTA_CLAUDE"] = self._env_antigo
         self.pasta.cleanup()
 
     def hook(self, **evento):
         """Escreve um evento como o hook escreveria e deixa o Clawd ler."""
         evento.setdefault("session_id", "s-1")
         evento.setdefault("hora", datetime.now().astimezone().isoformat(timespec="seconds"))
-        with open(self.claude / "clawd-eventos.jsonl", "a", encoding="utf-8") as f:
+        with open(self.claude / "pet-eventos.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(evento) + "\n")
         self.m.cc._prox_checagem = 0
         self.m.cc.tick()
@@ -259,7 +260,7 @@ class TestDoisMonitores(BaseMascote):
     """Simula um segundo monitor à esquerda do principal."""
 
     def setUp(self):
-        from clawd import tela
+        from pet import tela
         from tests.test_tela import ESQUERDA
         self.tela = tela
         self.original = tela.monitores
@@ -323,7 +324,7 @@ class TestDoisMonitores(BaseMascote):
 
 class TestUmMonitor(BaseMascote):
     def test_com_um_monitor_explica_no_menu(self):
-        from clawd import tela
+        from pet import tela
         if len(tela.monitores()) > 1:
             self.skipTest("este PC tem mais de um monitor")
         self.abrir_menu()

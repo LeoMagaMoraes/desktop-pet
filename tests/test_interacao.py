@@ -1,6 +1,6 @@
 import unittest
 
-from clawd.interacao import DetectorSacudida, eh_arrasto, estimar_velocidade
+from pet.interacao import DetectorSacudida, eh_arrasto, estimar_velocidade
 
 
 class TestCliqueOuArrasto(unittest.TestCase):

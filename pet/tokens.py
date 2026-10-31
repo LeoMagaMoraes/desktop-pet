@@ -182,7 +182,7 @@ class ContadorSemana:
 
 
 def pasta_claude():
-    """%USERPROFILE%\\.claude (CLAWD_PASTA_CLAUDE troca a pasta, usado nos testes)."""
-    if os.environ.get("CLAWD_PASTA_CLAUDE"):
-        return Path(os.environ["CLAWD_PASTA_CLAUDE"])
+    """%USERPROFILE%\\.claude (PET_PASTA_CLAUDE troca a pasta, usado nos testes)."""
+    if os.environ.get("PET_PASTA_CLAUDE"):
+        return Path(os.environ["PET_PASTA_CLAUDE"])
     return Path(os.environ.get("USERPROFILE") or Path.home()) / ".claude"

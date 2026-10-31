@@ -4,8 +4,8 @@ import time
 import unittest
 from pathlib import Path
 
-from clawd import eventos_claude as ev
-from clawd import tokens
+from pet import eventos_claude as ev
+from pet import tokens
 from tests.test_hook import resposta
 
 

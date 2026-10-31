@@ -80,7 +80,7 @@ class TestMenu(BaseMascote):
         self.abrir_menu()
         menu = self.m.menu
         menu._liberou_botao = True                  # o clique que abriu já foi solto
-        with mock.patch("clawd.menu.tela.botao_do_mouse_apertado", return_value=True), \
+        with mock.patch("pet.menu.tela.botao_do_mouse_apertado", return_value=True), \
                 mock.patch.object(menu.janela, "winfo_pointerxy", return_value=(-5000, -5000)):
             menu._vigiar_cliques()
         self.assertFalse(menu.aberto)
@@ -90,7 +90,7 @@ class TestMenu(BaseMascote):
         menu = self.m.menu
         menu._liberou_botao = True
         dentro = (menu.janela.winfo_rootx() + 5, menu.janela.winfo_rooty() + 5)
-        with mock.patch("clawd.menu.tela.botao_do_mouse_apertado", return_value=True), \
+        with mock.patch("pet.menu.tela.botao_do_mouse_apertado", return_value=True), \
                 mock.patch.object(menu.janela, "winfo_pointerxy", return_value=dentro):
             menu._vigiar_cliques()
         self.assertTrue(menu.aberto)

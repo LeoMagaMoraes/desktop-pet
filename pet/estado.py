@@ -1,4 +1,4 @@
-"""Save do Clawd em clawd.json: status, XP, fase, acessórios, posição e horário do save."""
+"""Save do pet em pet.json: status, XP, fase, acessórios, posição e horário do save."""
 
 import copy
 import json
@@ -11,6 +11,8 @@ log = logging.getLogger(__name__)
 
 PADRAO = {
     "versao": 1,
+    "especie": "clawd",          # pet ativo; os outros ficam guardados em "pets"
+    "pets": {},
     "status": {"fome": 80, "energia": 80, "felicidade": 80},   # 0 a 100, 100 = ótimo
     "xp": 0,
     "fase": "ovo",
@@ -27,6 +29,19 @@ PADRAO = {
         "dias_penalizados": 0,                   # dias sem Claude já descontados
         "tasks": 0,                              # tasks finalizadas desde sempre
         "historico": {},                         # "AAAA-MM-DD" -> resumo do dia
+    },
+    "clima": {
+        "cidade": "Florianópolis",
+        "estado": "Santa Catarina",
+        "pais": "BR",
+        "nome_exibido": None,
+        "lat": None,                 # achados uma vez pela API de geocoding
+        "lon": None,
+        "utc_offset": -10800,
+        "atual": None,               # último clima que conseguiu (usado sem internet)
+        "atualizado": None,
+        "chuva_na_tela": True,
+        "previsao_avisada": None,    # dia em que já avisou da chuva de manhã
     },
     "monitor": None,            # nome do monitor onde ele mora (ex.: \\.\DISPLAY2)
     "lugar_favorito": None,     # onde foi solto por último {"x", "y"}
@@ -70,7 +85,7 @@ class Estado:
                     _mesclar(dados, lido)
             except (OSError, ValueError) as erro:
                 # Save estragado: guarda uma cópia pra não perder e começa do padrão
-                log.error("clawd.json ilegível (%s); começando do zero", erro)
+                log.error("pet.json ilegível (%s); começando do zero", erro)
                 try:
                     caminho.replace(caminho.with_name(caminho.name + ".corrompido"))
                 except OSError:

@@ -5,10 +5,10 @@ from pathlib import Path
 
 # Caminhos
 PASTA_BASE = Path(__file__).resolve().parent.parent
-ARQUIVO_ESTADO = PASTA_BASE / "clawd.json"
-ARQUIVO_LOG = PASTA_BASE / "clawd.log"
+ARQUIVO_ESTADO = PASTA_BASE / "pet.json"
+ARQUIVO_LOG = PASTA_BASE / "pet.log"
 PASTA_SPRITES = PASTA_BASE / "sprites"
-ARQUIVO_ICONE = PASTA_BASE / "assets" / "clawd.ico"
+ARQUIVO_ICONE = PASTA_BASE / "assets" / "pet.ico"
 
 # Janela
 COR_CHAVE = "#010101"   # cor que o Windows deixa transparente (quase preto, pra bordas ficarem escuras)
@@ -61,6 +61,9 @@ META_EMPANTURRADO = 0.8      # fração da meta semanal em que ele fica empantur
 TERMINAIS = {"windowsterminal.exe", "openconsole.exe", "conhost.exe", "powershell.exe", "pwsh.exe",
              "cmd.exe", "code.exe", "cursor.exe", "windsurf.exe", "wezterm-gui.exe", "alacritty.exe",
              "mintty.exe", "tabby.exe", "hyper.exe", "claude.exe", "idea64.exe", "pycharm64.exe"}
+
+# Clima (Open-Meteo); a cidade fica no pet.json e troca pelo menu
+MINUTOS_CLIMA = 30           # de quanto em quanto tempo busca o clima
 
 # Rotina
 TOPMOST_MS = 3000       # de quanto em quanto tempo reforça "sempre por cima"

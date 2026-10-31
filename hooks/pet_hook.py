@@ -1,11 +1,11 @@
-"""Hook do Claude Code pro Clawd.
+"""Hook do Claude Code pro pet de desktop.
 
 O Claude Code chama este script nos eventos configurados em
 %USERPROFILE%\\.claude\\settings.json e manda o JSON do evento pela entrada.
 Ele grava:
-  ~/.claude/clawd-eventos.jsonl   um evento por linha (o Clawd lê os novos)
-  ~/.claude/clawd-status.json     o último evento, com os tokens da sessão
-  ~/.claude/clawd-cache/          soma parcial de tokens de cada sessão
+  ~/.claude/pet-eventos.jsonl     um evento por linha (o pet lê os novos)
+  ~/.claude/pet-status.json       o último evento, com os tokens da sessão
+  ~/.claude/pet-cache/            soma parcial de tokens de cada sessão
 
 Nunca escreve nada na saída (no UserPromptSubmit isso iria pro contexto do
 Claude) e sempre sai com código 0, pra nunca atrapalhar o Claude Code.
@@ -19,10 +19,10 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-# O pacote clawd fica uma pasta acima deste script
+# O pacote pet fica uma pasta acima deste script
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from clawd import eventos_claude, tokens  # noqa: E402
+from pet import eventos_claude, tokens  # noqa: E402
 
 LIMITE_LOG = 512 * 1024       # acima disso o log de eventos é rotacionado
 DIAS_CACHE = 14               # cache de sessões mais velho que isso é apagado
@@ -47,7 +47,7 @@ def _tokens_da_sessao(base, dados, registro):
     sessao = str(dados.get("session_id") or "sem-id")
     if not transcript or not Path(transcript).exists():
         return
-    pasta_cache = base / "clawd-cache"
+    pasta_cache = base / "pet-cache"
     pasta_cache.mkdir(exist_ok=True)
     arquivo = pasta_cache / f"{''.join(c for c in sessao if c.isalnum() or c == '-')}.json"
     cache = tokens.atualizar_sessao(transcript, _ler_json(arquivo))
@@ -87,7 +87,7 @@ def processar(dados, base):
         _tokens_da_sessao(base, dados, registro)
 
     # Log de eventos (rotaciona quando cresce) + foto do último evento
-    log = base / "clawd-eventos.jsonl"
+    log = base / "pet-eventos.jsonl"
     try:
         if log.stat().st_size > LIMITE_LOG:
             os.replace(log, log.with_name(log.name + ".old"))
@@ -95,7 +95,7 @@ def processar(dados, base):
         pass
     with open(log, "a", encoding="utf-8") as f:
         f.write(json.dumps(registro, ensure_ascii=False) + "\n")
-    _gravar_json(base / "clawd-status.json", registro)
+    _gravar_json(base / "pet-status.json", registro)
     return registro
 
 
@@ -109,7 +109,7 @@ def main():
     except Exception as erro:
         # Guarda o erro num arquivo em vez de quebrar o Claude Code
         try:
-            with open(tokens.pasta_claude() / "clawd-hook-erros.log", "a", encoding="utf-8") as f:
+            with open(tokens.pasta_claude() / "pet-hook-erros.log", "a", encoding="utf-8") as f:
                 f.write(f"{datetime.now().isoformat()} {type(erro).__name__}: {erro}\n")
         except OSError:
             pass

@@ -1,6 +1,6 @@
 import unittest
 
-from clawd.fisica import Corpo, Limites, Parametros, limitar_velocidade, passo
+from pet.fisica import Corpo, Limites, Parametros, limitar_velocidade, passo
 
 LIM = Limites(esquerda=0, direita=1000, topo=0, chao=800, meia_largura=40, altura=60)
 P = Parametros()

@@ -1,6 +1,6 @@
 import unittest
 
-from clawd import pixelart as p
+from pet import pixelart as p
 
 ANIMACOES_PEDIDAS = {"parado", "andando", "dormindo", "pendurado", "caindo",
                      "comendo", "comemorando", "acenando", "escondido"}
@@ -48,7 +48,7 @@ class TestPixelArt(unittest.TestCase):
         self.assertTrue({p.FITA, p.ARMACAO, p.BARBA} <= cores)
         # A cartola fica acima do corpo
         g = p.animacoes("anciao")["parado"][1][0]
-        self.assertTrue(any(g.px[0]))
+        self.assertTrue(any(g.px[p.ADULTO.topo - 1]))
 
     def test_so_o_ovo_choca(self):
         self.assertIn("chocando", p.animacoes("ovo"))
