@@ -19,6 +19,15 @@ PADRAO = {
     "doente": False,            # gripado até tomar remédio
     "horas_com_fome": 0.0,      # tempo seguido com fome baixa (leva à gripe)
     "modo_tamagotchi": True,    # desligado: status pausados, sem avisos
+    "claude": {
+        "so_io": False,                          # contar só input + output (sem cache)
+        "meta_semanal": {"total": 150_000_000, "io": 1_500_000},   # None = sem meta
+        "sons": True,
+        "ultima_atividade": None,                # último evento do Claude Code (ISO)
+        "dias_penalizados": 0,                   # dias sem Claude já descontados
+        "tasks": 0,                              # tasks finalizadas desde sempre
+        "historico": {},                         # "AAAA-MM-DD" -> resumo do dia
+    },
     "monitor": None,            # nome do monitor onde ele mora (ex.: \\.\DISPLAY2)
     "lugar_favorito": None,     # onde foi solto por último {"x", "y"}
     "ultima_posicao": None,     # onde estava quando salvou {"x", "y"}

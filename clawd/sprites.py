@@ -17,7 +17,7 @@ from . import pixelart
 log = logging.getLogger(__name__)
 
 
-def _grade_para_imagem(root, grade, escala):
+def grade_para_imagem(root, grade, escala):
     img = tk.PhotoImage(master=root, width=grade.largura, height=grade.altura)
     for y, linha in enumerate(grade.px):
         for x, cor in enumerate(linha):
@@ -30,7 +30,7 @@ def _grade_para_imagem(root, grade, escala):
 def criar_imagens_efeito(root, escala):
     """Coração, Zzz, mosquinha etc. Ficam fora da biblioteca porque não mudam com a fase."""
     escala_efeito = max(2, escala - 1)
-    return {nome: _grade_para_imagem(root, g, escala_efeito) for nome, g in pixelart.EFEITOS.items()}
+    return {nome: grade_para_imagem(root, g, escala_efeito) for nome, g in pixelart.EFEITOS.items()}
 
 
 class BibliotecaSprites:
@@ -87,7 +87,7 @@ class BibliotecaSprites:
 
     def _da_grade(self, grade):
         if id(grade) not in self._de_grade:
-            self._de_grade[id(grade)] = _grade_para_imagem(self.root, grade, self.escala)
+            self._de_grade[id(grade)] = grade_para_imagem(self.root, grade, self.escala)
         return self._de_grade[id(grade)]
 
     def _espelhar(self, img):

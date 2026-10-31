@@ -1,6 +1,7 @@
 """Testes de fumaça: sobem o mascote de verdade (precisa de tela) e simulam o mouse."""
 
 import json
+import os
 import tempfile
 import time
 import unittest
@@ -22,21 +23,73 @@ class BaseMascote(unittest.TestCase):
     def setUp(self):
         from clawd.mascote import Mascote
         self.pasta = tempfile.TemporaryDirectory()
+        # ~/.claude de mentira, pra não ler os eventos e transcripts de verdade
+        self.claude = Path(self.pasta.name) / "claude"
+        self.claude.mkdir()
+        self._env_antigo = os.environ.get("CLAWD_PASTA_CLAUDE")
+        os.environ["CLAWD_PASTA_CLAUDE"] = str(self.claude)
+        self.antes_de_criar()
         arquivo = Path(self.pasta.name) / "clawd.json"
         arquivo.write_text(json.dumps(self.SAVE), encoding="utf-8")
         self.m = Mascote(arquivo_estado=arquivo)
+        self.m.estado.dados["claude"]["sons"] = False      # teste sem bipe
         self.m.root.deiconify()
         self.m.root.update()
+
+    def antes_de_criar(self):
+        pass
 
     def tearDown(self):
         self.m.painel.fechar()
         self.m.sair()
+        if self._env_antigo is None:
+            os.environ.pop("CLAWD_PASTA_CLAUDE", None)
+        else:
+            os.environ["CLAWD_PASTA_CLAUDE"] = self._env_antigo
         self.pasta.cleanup()
+
+    def hook(self, **evento):
+        """Escreve um evento como o hook escreveria e deixa o Clawd ler."""
+        evento.setdefault("session_id", "s-1")
+        evento.setdefault("hora", datetime.now().astimezone().isoformat(timespec="seconds"))
+        with open(self.claude / "clawd-eventos.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(evento) + "\n")
+        self.m.cc._prox_checagem = 0
+        self.m.cc.tick()
 
     def evento(self, tipo, x, y, **kw):
         m = self.m
         m.canvas.event_generate(tipo, x=int(x - m.root.winfo_rootx()), y=int(y - m.root.winfo_rooty()),
                                 rootx=int(x), rooty=int(y), **kw)
+
+    def esperar(self, condicao, segundos=2.0):
+        """Processa eventos do Tk até a condição valer (as ações do menu rodam logo depois de fechar)."""
+        fim = time.perf_counter() + segundos
+        while not condicao() and time.perf_counter() < fim:
+            self.m.root.update()
+            time.sleep(0.01)
+
+    def abrir_menu(self):
+        x, y = self.m.corpo.x, self.m.corpo.y - 20
+        self.evento("<ButtonPress-3>", x, y)
+        self.m.root.update()
+
+    def _labels_do_menu(self):
+        pilha, achados = [self.m.menu.janela], []
+        while pilha:
+            w = pilha.pop()
+            if isinstance(w, tk.Label):
+                achados.append(w)
+            pilha.extend(w.winfo_children())
+        return achados
+
+    def textos_do_menu(self):
+        return [w.cget("text") for w in self._labels_do_menu()]
+
+    def clicar_no_menu(self, texto):
+        alvo = next(w for w in self._labels_do_menu() if w.cget("text") == texto)
+        alvo.event_generate("<ButtonRelease-1>")
+        self.m.root.update()
 
     def clicar(self):
         x, y = self.m.corpo.x, self.m.corpo.y - 20
@@ -92,6 +145,14 @@ class TestMascote(BaseMascote):
         m.mostrar_status()
         self.assertTrue(m.painel.aberto)
         m.root.update()
+
+    def test_sair_com_o_painel_aberto_fecha_tudo(self):
+        # Antes o destroy era pulado e o processo ficava vivo, invisível
+        self.m.mostrar_status()
+        self.m.root.update()
+        self.m.sair()
+        with self.assertRaises(tk.TclError):
+            self.m.root.winfo_exists()
 
     def test_barriga_cheia_recusa_comida(self):
         self.m.estado.status["fome"] = 100
@@ -215,11 +276,16 @@ class TestDoisMonitores(BaseMascote):
         self.assertTrue(self.m.monitor.principal)
 
     def test_menu_lista_os_dois(self):
-        m = self.m
-        m._atualizar_menu()
-        self.assertEqual(m.menu_monitores.index("end"), 1)
-        self.assertEqual(m.menu.entrycget(m.INDICE_MONITOR, "state"), "normal")
-        self.assertIn("Monitor", m.menu.entrycget(m.INDICE_MONITOR, "label"))
+        self.abrir_menu()
+        self.assertIn("2 ligados  ›", self.textos_do_menu())
+        self.clicar_no_menu("Monitor")
+        textos = self.textos_do_menu()
+        self.assertIn(self.lista[0].rotulo, textos)
+        self.assertIn(self.lista[1].rotulo, textos)
+        self.clicar_no_menu(self.lista[1].rotulo)
+        self.assertFalse(self.m.menu.aberto)
+        self.esperar(lambda: self.m.monitor.nome == self.lista[1].nome)
+        self.assertEqual(self.m.monitor.nome, self.lista[1].nome)
 
     def test_trocar_pelo_menu(self):
         m = self.m
@@ -256,12 +322,14 @@ class TestDoisMonitores(BaseMascote):
 
 
 class TestUmMonitor(BaseMascote):
-    def test_submenu_desativado_com_um_monitor(self):
+    def test_com_um_monitor_explica_no_menu(self):
         from clawd import tela
         if len(tela.monitores()) > 1:
             self.skipTest("este PC tem mais de um monitor")
-        self.m._atualizar_menu()
-        self.assertEqual(self.m.menu.entrycget(self.m.INDICE_MONITOR, "state"), "disabled")
+        self.abrir_menu()
+        self.assertIn("1 ligado  ›", self.textos_do_menu())
+        self.clicar_no_menu("Monitor")
+        self.assertTrue(any("Só tem um monitor" in t for t in self.textos_do_menu()))
 
 
 class TestOfflineDesligado(BaseMascote):

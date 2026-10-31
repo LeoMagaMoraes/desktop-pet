@@ -29,12 +29,20 @@ if WINDOWS:
                                           ctypes.POINTER(wintypes.RECT), wintypes.LPARAM)
     _user32.EnumDisplayMonitors.argtypes = [wintypes.HDC, ctypes.c_void_p, _MonitorEnumProc, wintypes.LPARAM]
     _user32.GetMonitorInfoW.argtypes = [wintypes.HMONITOR, ctypes.POINTER(_MONITORINFOEXW)]
+    _user32.GetForegroundWindow.restype = wintypes.HWND
+    _user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    _kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    _kernel32.OpenProcess.restype = wintypes.HANDLE
+    _kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR,
+                                                     ctypes.POINTER(wintypes.DWORD)]
+    _kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
 
 SPI_GETWORKAREA = 0x30
 GWL_EXSTYLE = -20
 WS_EX_TOOLWINDOW = 0x80
 WS_EX_APPWINDOW = 0x40000
 ERROR_ALREADY_EXISTS = 183
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 MONITORINFOF_PRIMARY = 1
 
 
@@ -158,6 +166,48 @@ def segundos_ocioso():
         return 0.0
     agora = _kernel32.GetTickCount() & 0xFFFFFFFF
     return ((agora - info.dwTime) & 0xFFFFFFFF) / 1000
+
+
+def programa_em_primeiro_plano():
+    """Nome do .exe da janela ativa, em minúsculas (ex.: 'windowsterminal.exe'), ou ''."""
+    if not WINDOWS:
+        return ""
+    hwnd = _user32.GetForegroundWindow()
+    if not hwnd:
+        return ""
+    pid = wintypes.DWORD()
+    _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+    processo = _kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid.value)
+    if not processo:
+        return ""
+    try:
+        tamanho = wintypes.DWORD(1024)
+        caminho = ctypes.create_unicode_buffer(tamanho.value)
+        if not _kernel32.QueryFullProcessImageNameW(processo, 0, caminho, ctypes.byref(tamanho)):
+            return ""
+        return caminho.value.rsplit("\\", 1)[-1].lower()
+    finally:
+        _kernel32.CloseHandle(processo)
+
+
+def cantos_arredondados(janela):
+    """Pede pro Windows 11 arredondar os cantos da janela (no 10 não faz nada)."""
+    if not WINDOWS:
+        return
+    try:
+        hwnd = _user32.GetParent(janela.winfo_id()) or janela.winfo_id()
+        preferencia = ctypes.c_int(2)          # DWMWCP_ROUND
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 33, ctypes.byref(preferencia),
+                                                   ctypes.sizeof(preferencia))
+    except (AttributeError, OSError):
+        pass
+
+
+def botao_do_mouse_apertado():
+    """True se o botão esquerdo, direito ou do meio está apertado agora (em qualquer janela)."""
+    if not WINDOWS:
+        return False
+    return any(_user32.GetAsyncKeyState(tecla) & 0x8000 for tecla in (0x01, 0x02, 0x04))
 
 
 def instancia_unica(nome):

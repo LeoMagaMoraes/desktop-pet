@@ -1,9 +1,9 @@
-"""Janelinha de Status: fase, XP e barrinhas de fome, energia, felicidade e limpeza."""
+"""Janelinha de Status: fase, XP, barrinhas dos status e tokens do Claude Code."""
 
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import necessidades
+from . import config, necessidades, tokens
 
 FUNDO = "#1F1E1D"
 TEXTO = "#F5F0E8"
@@ -13,6 +13,7 @@ LARANJA = "#D97757"
 VERDE = "#7BC67B"
 AMARELO = "#F2C14E"
 VERMELHO = "#E8455A"
+AZUL = "#8FB4FF"
 SEGMENTOS = 10
 
 
@@ -117,7 +118,7 @@ class Painel:
                           font=self.fonte, text=f"{round(valor)}")
             y += self.linha_h
 
-        saude = "🤒 Gripado: dá Remédio no menu" if d["doente"] else "❤️ Saudável"
+        saude = "🤒 Gripado: dá Remédio no menu" if d["doente"] else "❤ Saudável"
         c.create_text(pad, y, anchor="nw", fill=VERMELHO if d["doente"] else TEXTO,
                       font=self.fonte, text=saude)
         y += self.linha_h
@@ -132,7 +133,70 @@ class Painel:
             c.create_text(pad, y, anchor="nw", fill=APAGADO, font=self.fonte_peq, text=nota,
                           width=self.largura - 2 * pad)
             y += self.linha_h
+
+        y = self._desenhar_tokens(c, y + e, pad)
         c.config(height=y + pad // 2)
+
+    def _texto(self, x, y, texto, cor=TEXTO, fonte=None, anchor="nw"):
+        """Escreve e devolve a altura usada (quebra a linha se não couber)."""
+        item = self.canvas.create_text(x, y, anchor=anchor, fill=cor, font=fonte or self.fonte, text=texto,
+                                       width=self.largura - 2 * x if anchor == "nw" else 0)
+        x0, y0, x1, y1 = self.canvas.bbox(item)
+        return y1 - y0
+
+    def _desenhar_tokens(self, c, y, pad):
+        """Tokens da sessão e da semana, com a meta. Uso deste PC, não o limite do plano."""
+        e = self.m.escala
+        cc = self.m.cc
+        c.create_line(pad, y, self.largura - pad, y, fill=VAZIO, width=max(1, e // 2))
+        y += 2 * e
+        y += self._texto(pad, y, "🤖 Claude Code · este PC", fonte=self.fonte_titulo) + e
+
+        semana = cc.contar(cc.semana) if cc.semana is not None else None
+        sessao = cc.contar(cc.sessao)
+        meta = cc.meta()
+        largura_barra = self.largura - 2 * pad
+
+        # Últimos 7 dias, comparado com a meta
+        c.create_text(pad, y, anchor="nw", fill=TEXTO, font=self.fonte, text="Últimos 7 dias")
+        if semana is None:
+            valor = "contando..."
+        else:
+            valor = tokens.formatar(semana) + (f" / {tokens.formatar(meta)}" if meta else "")
+        c.create_text(self.largura - pad, y, anchor="ne", fill=APAGADO, font=self.fonte, text=valor)
+        y += self.linha_h + e // 2
+        fracao = (semana or 0) / meta if meta else 0
+        cor = LARANJA if fracao < 0.8 else AMARELO if fracao < 1 else VERMELHO
+        self._barra(pad, y, largura_barra, fracao, cor)
+        y += self.seg_h + 2 * e
+
+        # Sessão atual, como parte da semana
+        c.create_text(pad, y, anchor="nw", fill=TEXTO, font=self.fonte, text="Sessão atual")
+        c.create_text(self.largura - pad, y, anchor="ne", fill=APAGADO, font=self.fonte,
+                      text=tokens.formatar(sessao) if cc.sessao else "—")
+        y += self.linha_h + e // 2
+        self._barra(pad, y, largura_barra, sessao / semana if semana else 0, AZUL)
+        y += self.seg_h + 2 * e
+
+        if cc.ultima_task:
+            y += self._texto(pad, y, f"Última task: {tokens.formatar(cc.contar(cc.ultima_task))} tokens")
+        if cc.semana:
+            s = cc.semana
+            cache = s["cache_criacao"] + s["cache_leitura"]
+            y += self._texto(pad, y, f"Semana: entrada {tokens.formatar(s['entrada'])} · "
+                                     f"saída {tokens.formatar(s['saida'])} · cache {tokens.formatar(cache)}",
+                             APAGADO, self.fonte_peq)
+
+        if fracao >= 1:
+            y += self._texto(pad, y, "🛌 Passou da meta da semana", VERMELHO, self.fonte_peq)
+        elif fracao >= config.META_EMPANTURRADO:
+            y += self._texto(pad, y, "😪 Perto da meta: ele fica empanturrado", AMARELO, self.fonte_peq)
+
+        modo = "só input + output" if cc.so_io else "tudo, com cache"
+        y += e + self._texto(pad, y + e, f"Contando: {modo} (troca no menu Claude Code).\n"
+                                         "É o uso deste PC nos últimos 7 dias, não o limite do "
+                                         "seu plano: esse aparece no /usage.", APAGADO, self.fonte_peq)
+        return y
 
     def _segmentos(self, x, y, valor):
         """Barra em quadradinhos, estilo pixel."""

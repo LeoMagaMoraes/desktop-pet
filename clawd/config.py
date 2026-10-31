@@ -8,6 +8,7 @@ PASTA_BASE = Path(__file__).resolve().parent.parent
 ARQUIVO_ESTADO = PASTA_BASE / "clawd.json"
 ARQUIVO_LOG = PASTA_BASE / "clawd.log"
 PASTA_SPRITES = PASTA_BASE / "sprites"
+ARQUIVO_ICONE = PASTA_BASE / "assets" / "clawd.ico"
 
 # Janela
 COR_CHAVE = "#010101"   # cor que o Windows deixa transparente (quase preto, pra bordas ficarem escuras)
@@ -46,6 +47,20 @@ LIMPEZA_POR_PIXEL = 0.04     # sujeira tirada por pixel de mouse esfregado
 XP_ALIMENTAR = 5
 XP_BRINCAR = 5
 XP_REMEDIO = 2
+
+# Claude Code
+XP_PROMPT = 2
+XP_TASK = 10                 # + 1 a cada 5k tokens de saída, até +40
+XP_TESTE_OK = 3
+FOME_PROMPT = 10             # prompt vira comida 🍤
+SEGUNDOS_SEMANA = 300        # de quanto em quanto tempo recalcula os tokens da semana
+MINUTOS_TRABALHO_PARADO = 20  # sem eventos por esse tempo, para de "digitar"
+MINUTOS_ESPERA_MAX = 30      # para de acenar sozinho depois disso
+META_EMPANTURRADO = 0.8      # fração da meta semanal em que ele fica empanturrado
+# Programas que contam como "voltou pro terminal" (nome do .exe em minúsculas)
+TERMINAIS = {"windowsterminal.exe", "openconsole.exe", "conhost.exe", "powershell.exe", "pwsh.exe",
+             "cmd.exe", "code.exe", "cursor.exe", "windsurf.exe", "wezterm-gui.exe", "alacritty.exe",
+             "mintty.exe", "tabby.exe", "hyper.exe", "claude.exe", "idea64.exe", "pycharm64.exe"}
 
 # Rotina
 TOPMOST_MS = 3000       # de quanto em quanto tempo reforça "sempre por cima"

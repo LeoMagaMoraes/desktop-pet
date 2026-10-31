@@ -105,7 +105,8 @@ class Tamagotchi:
                 # O PC ficou suspenso com o programa aberto: conta como offline
                 eventos = necessidades.simular_offline(self.d, dt / 3600)
             else:
-                eventos = necessidades.passar_tempo(self.d, dt / 3600, dormindo, sozinho)
+                eventos = necessidades.passar_tempo(self.d, dt / 3600, dormindo, sozinho,
+                                                    mult_energia=self.m.cc.mult_energia())
             if "ficou_doente" in eventos:
                 self.m.falar("Atchim! Acho que fiquei gripado... 🤒", 3)
 

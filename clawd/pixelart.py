@@ -22,6 +22,8 @@ CASCA_SOMBRA = "#D9CBB0"
 BARBA = "#F2EEE6"
 ARMACAO = "#3A2A20"
 FITA = "#8B2E2E"
+TAMPA = "#9AA0A6"
+TAMPA_SOMBRA = "#6B7075"
 
 FASES = ("ovo", "filhote", "clawd", "anciao")
 
@@ -88,6 +90,7 @@ _BRACOS = {
     "normal": [(dx, None) for dx in (-2, -1)],
     "cima": [(dx, y) for dx in (-2, -1) for y in (-2, -1, 0, 1)],
     "cima_torto": [(dx, y) for dx in (-3, -2) for y in (-2, -1)] + [(dx, y) for dx in (-2, -1) for y in (0, 1)],
+    "baixo": [(dx, "b") for dx in (-2, -1)],      # uma linha abaixo do normal (digitando)
     "nenhum": [],
 }
 
@@ -98,12 +101,15 @@ _OLHOS = {
     "feliz": [(-1, 1, PRETO), (0, 0, PRETO), (1, 1, PRETO)],
     "tonto": [(-1, 0, PRETO), (1, 0, PRETO), (0, 1, PRETO), (-1, 2, PRETO), (1, 2, PRETO)],
     "arregalado": [(-1, 0, BRANCO), (0, 0, PRETO), (-1, 1, PRETO), (0, 1, PRETO)],
+    "concentrado": [(-1, 0, PRETO), (0, 0, PRETO), (0, 1, PRETO)],
+    "apertado": [(-1, 0, PRETO), (0, 1, PRETO), (-1, 2, PRETO)],          # > <
+    "sonolento": [(-1, 0, SOMBRA), (0, 0, SOMBRA), (-1, 1, PRETO), (0, 1, PRETO)],
 }
 
 
 def clawd(olhos="aberto", braco_esq="normal", braco_dir="normal", pernas="normal",
           dy=0, dx=0, olhar=0, boca=None, bochecha=False, respira=False,
-          forma=ADULTO, acessorios=()):
+          forma=ADULTO, acessorios=(), laptop=False):
     """Desenha um quadro do Clawd.
 
     pernas: normal, passoA, passoB (andando), balancoA, balancoB (pendurado)
@@ -136,8 +142,13 @@ def clawd(olhos="aberto", braco_esq="normal", braco_dir="normal", pernas="normal
 
     # Braços
     for lado, tipo in ((-1, braco_esq), (1, braco_dir)):
-        for (bx, by) in _BRACOS[tipo]:
-            linhas = (f.braco_dy, f.braco_dy + 1) if by is None else (by,)
+        for (bx, by) in _BRACOS.get(tipo, ()):
+            if by is None:
+                linhas = (f.braco_dy, f.braco_dy + 1)
+            elif by == "b":
+                linhas = (f.braco_dy + 1, f.braco_dy + 2)
+            else:
+                linhas = (by,)
             coluna = f.x0 + bx
             for ly in linhas:
                 g.ponto((coluna if lado < 0 else _espelho(coluna)) + dx, t + ly, LARANJA)
@@ -157,6 +168,10 @@ def clawd(olhos="aberto", braco_esq="normal", braco_dir="normal", pernas="normal
         g.ponto(f.olho_x + ox + dx + olhar, ey + oy, cor)
         g.ponto(_espelho(f.olho_x) - ox + dx + olhar, ey + oy, cor)
 
+    if braco_esq == "rosto":
+        # Facepalm: o bracinho atravessa o rosto e tapa o olho esquerdo
+        g.retangulo(f.x0 - 2 + dx, ey, f.olho_x + 1 + dx, ey + 1, SOMBRA)
+
     if bochecha:
         g.ponto(f.x0 + 1 + dx, t + f.braco_dy + 1, ROSA)
         g.ponto(_espelho(f.x0 + 1) + dx, t + f.braco_dy + 1, ROSA)
@@ -165,6 +180,28 @@ def clawd(olhos="aberto", braco_esq="normal", braco_dir="normal", pernas="normal
         _oculos(g, f, ey, dx)
     if "cartola" in acessorios:
         _cartola(g, f, t, dx)
+    if laptop:
+        _laptop(g, f, t)
+    return g
+
+
+def _laptop(g, f, t):
+    # Tampa de laptop vista de trás, no chão na frente dele, com um brilhinho no meio
+    meia = (LARGURA - 2 * f.x0) // 4 + 1
+    x0, x1 = LARGURA // 2 - meia, LARGURA // 2 - 1 + meia
+    topo = t + f.olho_dy + 2
+    g.retangulo(x0, topo, x1, ALTURA - 2, TAMPA)
+    g.retangulo(x0, ALTURA - 1, x1, ALTURA - 1, TAMPA_SOMBRA)
+    g.ponto(LARGURA // 2 - 1, (topo + ALTURA - 1) // 2, BRANCO)
+
+
+def de_cabeca_pra_baixo(grade, descer):
+    """Vira a grade de ponta-cabeça e desce `descer` linhas (pra encostar no chão)."""
+    g = Grade(grade.largura, grade.altura)
+    for y, linha in enumerate(grade.px):
+        for x, cor in enumerate(linha):
+            if cor:
+                g.ponto(x, grade.altura - 1 - y + descer, cor)
     return g
 
 
@@ -264,6 +301,18 @@ def _animacoes_clawd(forma, acessorios):
         "tonto": (160, [c(olhos="tonto", dx=-1), c(olhos="tonto", dx=1)]),
         # "Aaa..." com a cabeça pra cima e depois o "tchim!" pra baixo
         "espirrando": (300, [c(olhos="fechado", boca="fechada"), c(olhos="fechado", dy=1, boca="aberta")]),
+        # Claude Code trabalhando: bracinhos alternando no teclado
+        "digitando": (160, [c(olhos="concentrado", braco_esq="baixo", laptop=True),
+                            c(olhos="concentrado", braco_dir="baixo", laptop=True)]),
+        # Teste falhou: de costas no chão, perninhas tremendo
+        "caido": (220, [de_cabeca_pra_baixo(c(olhos="tonto", pernas="balancoA"), forma.topo),
+                        de_cabeca_pra_baixo(c(olhos="tonto", pernas="balancoB"), forma.topo)]),
+        # Erro no terminal
+        "mao_na_cabeca": (300, [c(olhos="apertado", braco_esq="rosto", boca="fechada"),
+                                c(olhos="apertado", braco_esq="rosto", boca="aberta")]),
+        # Perto da meta semanal de tokens
+        "empanturrado": (400, [c(olhos="sonolento", bochecha=True, boca="fechada")] * 6
+                         + [c(olhos="fechado", bochecha=True, respira=True)] * 2),
     }
 
 
@@ -338,3 +387,159 @@ EFEITOS = {
     "gota": de_texto(["A",
                       "A"], _CORES_EFEITO),
 }
+
+# Ícones do menu (coloridos, ao contrário dos emojis que o Tk desenha em preto e branco)
+_CORES_ICONE = {"K": PRETO, "W": BRANCO, "O": LARANJA, "S": SOMBRA, "Y": "#FFD34D", "R": "#E8455A",
+                "G": "#7BC67B", "B": "#8FB4FF", "M": "#9C6B43", "C": "#D8DEE6", "D": "#5A606A",
+                "E": CASCA}
+ICONES = {
+    "comida": de_texto(["....MMM.",
+                        "...MMMMM",
+                        "..MMMMMM",
+                        "..MMMMMM",
+                        "...MMMM.",
+                        "..WW....",
+                        ".WW.....",
+                        "WW......"], _CORES_ICONE),
+    "bola": de_texto(["..KKKK..",
+                      ".KWWWWK.",
+                      "KWWKKWWK",
+                      "KWKKKKWK",
+                      "KWWKKWWK",
+                      "KWWWWWWK",
+                      ".KWWWWK.",
+                      "..KKKK.."], _CORES_ICONE),
+    "lua": de_texto(["...YYY..",
+                     "..YY....",
+                     ".YY.....",
+                     ".YY.....",
+                     ".YY.....",
+                     ".YY...Y.",
+                     "..YY.YY.",
+                     "...YYY.."], _CORES_ICONE),
+    "sol": de_texto(["Y..Y..Y",
+                     ".Y.Y.Y.",
+                     "..YYY..",
+                     "YYYYYYY",
+                     "..YYY..",
+                     ".Y.Y.Y.",
+                     "Y..Y..Y"], _CORES_ICONE),
+    "pilula": de_texto(["....RRR.",
+                        "...RRRRR",
+                        "..RRRRRR",
+                        ".WWRRRR.",
+                        "WWWWRR..",
+                        "WWWWW...",
+                        "WWWW....",
+                        ".WW....."], _CORES_ICONE),
+    "grafico": de_texto(["......G.",
+                         "......G.",
+                         "...Y..G.",
+                         "...Y..G.",
+                         "R..Y..G.",
+                         "R..Y..G.",
+                         "CCCCCCCC"], _CORES_ICONE),
+    "nuvem": de_texto(["...CC...",
+                       "..CCCC..",
+                       ".CCCCCC.",
+                       "CCCCCCCC",
+                       "CCCCCCCC",
+                       ".CCCCCC."], _CORES_ICONE),
+    "monitor": de_texto(["DDDDDDDD",
+                         "DBBBBBBD",
+                         "DBBBBBBD",
+                         "DBBBBBBD",
+                         "DDDDDDDD",
+                         "...DD...",
+                         "..DDDD.."], _CORES_ICONE),
+    "clawd": de_texto([".OOOOOOOO.",
+                       ".OOKOOKOO.",
+                       "OOOKOOKOOO",
+                       ".OOOOOOOO.",
+                       ".SSSSSSSS.",
+                       ".O.O..O.O."], _CORES_ICONE),
+    "ovo": de_texto(["..EEEE..",
+                     ".EEEEEE.",
+                     ".EEOEEE.",
+                     "EEEEEOEE",
+                     "EEOEEEEE",
+                     "EEEEEOEE",
+                     ".EEEEEE.",
+                     "..EEEE.."], _CORES_ICONE),
+    "alvo": de_texto(["..RRRR..",
+                      ".RWWWWR.",
+                      "RWRRRRWR",
+                      "RWRWWRWR",
+                      "RWRWWRWR",
+                      "RWRRRRWR",
+                      ".RWWWWR.",
+                      "..RRRR.."], _CORES_ICONE),
+    "som": de_texto(["...C....",
+                     "..CC..B.",
+                     "CCCC...B",
+                     "CCCC...B",
+                     "CCCC...B",
+                     "..CC..B.",
+                     "...C...."], _CORES_ICONE),
+    "plugue": de_texto(["..C..C..",
+                        "..C..C..",
+                        ".DDDDDD.",
+                        ".DDDDDD.",
+                        "..DDDD..",
+                        "...DD...",
+                        "...OO..."], _CORES_ICONE),
+    "moeda": de_texto(["..YYYY..",
+                       ".YYMMYY.",
+                       "YYMYYYYY",
+                       "YYMYYYYY",
+                       "YYMYYYYY",
+                       "YYYMMYYY",
+                       ".YYYYYY.",
+                       "..YYYY.."], _CORES_ICONE),
+    "porta": de_texto([".MMMMMM.",
+                       ".MMMMMM.",
+                       ".MMMMMM.",
+                       ".MMMMYM.",
+                       ".MMMMMM.",
+                       ".MMMMMM.",
+                       "CCCCCCCC"], _CORES_ICONE),
+}
+
+
+def com_contorno(grade, cor, ate_linha=None):
+    """Copia a grade pintando de `cor` cada pixel vazio encostado no desenho (contorno).
+
+    ate_linha: só contorna até essa linha (pra não encher de escuro o vão entre as perninhas).
+    """
+    g = Grade(grade.largura, grade.altura)
+    for y, linha in enumerate(grade.px):
+        for x, c in enumerate(linha):
+            if c:
+                g.ponto(x, y, c)
+                continue
+            if ate_linha is not None and y > ate_linha:
+                continue
+            vizinhos = ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1))
+            if any(0 <= vx < grade.largura and 0 <= vy < grade.altura and grade.px[vy][vx]
+                   for vx, vy in vizinhos):
+                g.ponto(x, y, cor)
+    return g
+
+
+# Ícone do programa (atalho da área de trabalho e janelas): 16x16, escala sem borrar pra 32/48/64/128/256
+ICONE_APP = com_contorno(de_texto(["................",
+                                   "................",
+                                   "................",
+                                   "...OOOOOOOOOO...",
+                                   "...OOOOOOOOOO...",
+                                   "...OOKOOOOKOO...",
+                                   ".OOOOKOOOOKOOOO.",
+                                   ".OOOOOOOOOOOOOO.",
+                                   "...OOOOOOOOOO...",
+                                   "...SSSSSSSSSS...",
+                                   "....O.O..O.O....",
+                                   "....O.O..O.O....",
+                                   "....O.O..O.O....",
+                                   "................",
+                                   "................",
+                                   "................"], _CORES_ICONE), "#5C2A1A", ate_linha=9)

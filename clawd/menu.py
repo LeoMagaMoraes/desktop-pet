@@ -1,0 +1,336 @@
+"""Menu do clique direito: janelinha escura com ícones em pixel art, barrinhas dos
+status e chaves liga/desliga. Os submenus (Monitor, Claude Code) abrem como
+páginas dentro do próprio menu, com um "Voltar" no topo.
+
+Fecha com Esc, clicando fora ou escolhendo uma opção.
+"""
+
+import tkinter as tk
+from tkinter import font as tkfont
+
+from . import necessidades, pixelart, tela, tokens
+from .sprites import grade_para_imagem
+
+FUNDO = "#262422"
+BORDA = "#45403B"
+DESTAQUE = "#3A3532"
+TEXTO = "#F5F0E8"
+APAGADO = "#9A948C"
+SECAO = "#B8A99A"
+LARANJA = "#D97757"
+VERMELHO = "#E8455A"
+VERDE = "#7BC67B"
+AMARELO = "#F2C14E"
+VAZIO = "#45403B"
+
+
+def cor_do_valor(valor):
+    return VERDE if valor >= 60 else AMARELO if valor >= 30 else VERMELHO
+
+
+class MenuClawd:
+    def __init__(self, mascote):
+        self.m = mascote
+        e = mascote.escala
+        self.e = e
+        self.janela = None
+        self.pagina = "principal"
+        self._ancora = (0, 0)
+        self._liberou_botao = False      # só fecha clicando fora depois de soltar o clique que abriu
+        self._vigia = None               # id do after que confere os cliques
+        root = mascote.root
+        self.fonte = tkfont.Font(root=root, family="Segoe UI", size=10)
+        self.fonte_negrito = tkfont.Font(root=root, family="Segoe UI", size=10, weight="bold")
+        self.fonte_titulo = tkfont.Font(root=root, family="Segoe UI", size=11, weight="bold")
+        self.fonte_pequena = tkfont.Font(root=root, family="Segoe UI", size=8)
+        self.fonte_secao = tkfont.Font(root=root, family="Segoe UI", size=8, weight="bold")
+        escala_icone = max(2, e - 2)
+        self.icones = {nome: grade_para_imagem(root, g, escala_icone) for nome, g in pixelart.ICONES.items()}
+        self.largura = 64 * e
+        self._retrato = {}               # miniatura do Clawd de cada fase pro cabeçalho
+
+    # ------------------------------------------------------------------ abrir e fechar
+
+    @property
+    def aberto(self):
+        return self.janela is not None
+
+    def abrir(self, x, y):
+        self.fechar()
+        self.pagina = "principal"
+        self._ancora = (x, y)
+        j = self.janela = tk.Toplevel(self.m.root)
+        j.withdraw()
+        j.overrideredirect(True)
+        j.attributes("-topmost", True)
+        j.config(bg=BORDA)
+        j.bind("<Escape>", lambda ev: self.fechar())
+        j.bind("<BackSpace>", lambda ev: self._ir("principal"))
+        self._liberou_botao = False
+        self._montar()
+        j.deiconify()
+        tela.cantos_arredondados(j)
+        j.focus_force()
+        self._vigiar_cliques()
+
+    def fechar(self):
+        if self._vigia is not None:
+            self.m.root.after_cancel(self._vigia)
+            self._vigia = None
+        if self.janela is not None:
+            self.janela.destroy()
+            self.janela = None
+
+    def _vigiar_cliques(self):
+        """Fecha quando você clica em qualquer lugar fora do menu."""
+        self._vigia = None
+        if self.janela is None:
+            return
+        apertado = tela.botao_do_mouse_apertado()
+        if not apertado:
+            self._liberou_botao = True
+        elif self._liberou_botao:
+            px, py = self.janela.winfo_pointerxy()
+            x0, y0 = self.janela.winfo_rootx(), self.janela.winfo_rooty()
+            dentro = x0 <= px < x0 + self.janela.winfo_width() and y0 <= py < y0 + self.janela.winfo_height()
+            if not dentro:
+                self.fechar()
+                return
+        self._vigia = self.m.root.after(60, self._vigiar_cliques)
+
+    def _ir(self, pagina):
+        if self.janela is not None:
+            self.pagina = pagina
+            self._montar()
+
+    # ------------------------------------------------------------------ montagem
+
+    def _montar(self):
+        j = self.janela
+        for filho in j.winfo_children():
+            filho.destroy()
+        e = self.e
+        self.corpo = tk.Frame(j, bg=FUNDO, padx=e, pady=e)
+        self.corpo.pack(padx=1, pady=1, fill="both")
+        tk.Frame(self.corpo, width=self.largura, height=0, bg=FUNDO).pack()   # largura mínima
+        {"principal": self._pagina_principal, "monitor": self._pagina_monitor,
+         "claude": self._pagina_claude}[self.pagina]()
+        self._posicionar()
+
+    def _posicionar(self):
+        """Abre acima e à esquerda do mouse (o Clawd mora lá embaixo), sem sair da tela."""
+        j = self.janela
+        j.update_idletasks()
+        w, h = j.winfo_reqwidth(), j.winfo_reqheight()
+        area = self.m.area
+        x, y = self._ancora
+        x = min(max(x - w + 4 * self.e, area.esquerda + 4), area.direita - w - 4)
+        y = y - h - 2 * self.e if y - h - 2 * self.e >= area.topo else min(y + 2 * self.e, area.base - h)
+        j.geometry(f"{w}x{h}+{round(x)}+{round(max(area.topo, y))}")
+
+    def _pagina_principal(self):
+        m = self.m
+        self._cabecalho()
+        ativo = m.tama.ativo
+        s = m.estado.status
+
+        self._secao("CUIDAR")
+        barra = (lambda v: (lambda pai: self._mini_barra(pai, v))) if ativo else (lambda v: None)
+        self._item("comida", "Alimentar", m.alimentar, direita=barra(s["fome"]))
+        self._item("bola", "Brincar", m.brincar, direita=barra(s["felicidade"]))
+        if m.acao == "dormindo":
+            self._item("sol", "Acordar", lambda: m.acordar("Bom dia! ☀️"))
+        else:
+            self._item("lua", "Dormir", m.dormir, direita=barra(s["energia"]))
+        if ativo and m.estado.dados["doente"]:
+            self._item("pilula", "Dar remédio", m.dar_remedio, destaque_cor=VERMELHO,
+                       direita=lambda pai: self._etiqueta(pai, "gripado", VERMELHO))
+
+        self._secao("VER")
+        self._item("grafico", "Status e tokens", m.mostrar_status)
+        self._item("nuvem", "Clima", m.mostrar_clima)
+
+        self._secao("AJUSTES")
+        n = len(m.monitores)
+        self._item("monitor", "Monitor", lambda: self._ir("monitor"), fecha=False,
+                   direita=lambda pai: self._etiqueta(pai, f"{n} ligado{'s' if n > 1 else ''}  ›"))
+        self._item("clawd", "Claude Code", lambda: self._ir("claude"), fecha=False,
+                   direita=lambda pai: self._etiqueta(pai, "›"))
+        ligado = m.estado.dados["modo_tamagotchi"]
+        self._chave("ovo", "Modo Tamagotchi", ligado, lambda: m.tama.mudar_modo(not ligado))
+
+        self._separador()
+        self._item("porta", "Sair", m.sair, destaque_cor="#5A2E2E")
+
+    def _pagina_monitor(self):
+        self._voltar("Monitor")
+        atual = self.m.monitor.nome
+        for mon in self.m.monitores:
+            marcado = mon.nome == atual
+            self._item("monitor", mon.rotulo, (lambda nome=mon.nome: self.m.trocar_monitor(nome)),
+                       negrito=marcado,
+                       direita=(lambda pai: self._etiqueta(pai, "● aqui", LARANJA)) if marcado else None)
+        if len(self.m.monitores) == 1:
+            self._nota("Só tem um monitor ligado. Plugue outro e ele aparece aqui.")
+        else:
+            self._nota("Dica: arrastar e soltar ele em outra tela também muda de monitor.")
+
+    def _pagina_claude(self):
+        m = self.m
+        cc = m.cc
+        d = m.estado.dados["claude"]
+        self._voltar("Claude Code")
+        self._chave("moeda", "Contar só input e output", cc.so_io, lambda: cc.alternar_so_io(not cc.so_io))
+        meta = cc.meta()
+        self._item("alvo", "Meta semanal", m._perguntar_meta,
+                   direita=lambda pai: self._etiqueta(pai, tokens.formatar(meta) if meta else "sem meta"))
+        self._chave("som", "Sons", d["sons"], lambda: d.__setitem__("sons", not d["sons"]))
+        self._item("plugue", "Reinstalar hooks", m._reinstalar_hooks)
+
+        semana = tokens.formatar(cc.contar(cc.semana)) if cc.semana is not None else "contando..."
+        sessao = tokens.formatar(cc.contar(cc.sessao)) if cc.sessao else "—"
+        self._nota(f"Últimos 7 dias: {semana}  ·  sessão: {sessao}\n"
+                   "Uso deste PC, não o limite do plano (veja /usage).")
+
+    # ------------------------------------------------------------------ peças
+
+    def _cabecalho(self):
+        """Miniatura do Clawd, nome da fase, XP e a barra até a próxima fase."""
+        m, e = self.m, self.e
+        d = m.estado.dados
+        topo = tk.Frame(self.corpo, bg=FUNDO, padx=e, pady=e)
+        topo.pack(fill="x")
+        tk.Label(topo, image=self._retrato_da_fase(), bg=FUNDO).pack(side="left", padx=(0, 2 * e))
+        textos = tk.Frame(topo, bg=FUNDO)
+        textos.pack(side="left", fill="x", expand=True)
+        tk.Label(textos, text=necessidades.NOMES_FASE[m.fase], font=self.fonte_titulo, fg=TEXTO,
+                 bg=FUNDO, anchor="w").pack(fill="x")
+        proxima = necessidades.proxima_fase(d["xp"])
+        if proxima:
+            nome, alvo = proxima
+            inicio = necessidades.xp_minimo(m.fase)
+            fracao = (d["xp"] - inicio) / max(1, alvo - inicio)
+            legenda = f"⭐ {d['xp']} XP  ·  {alvo - d['xp']} pra {necessidades.NOMES_FASE[nome]}"
+        else:
+            fracao, legenda = 1.0, f"⭐ {d['xp']} XP  ·  fase máxima!"
+        tk.Label(textos, text=legenda, font=self.fonte_pequena, fg=APAGADO, bg=FUNDO,
+                 anchor="w").pack(fill="x")
+        barra = tk.Canvas(textos, width=1, height=e, bg=VAZIO, highlightthickness=0, bd=0)
+        barra.pack(fill="x", pady=(e // 2, 0))
+        barra.bind("<Configure>", lambda ev: (barra.delete("all"), barra.create_rectangle(
+            0, 0, ev.width * min(1.0, fracao), ev.height, fill=LARANJA, width=0)))
+        if not m.estado.dados["modo_tamagotchi"]:
+            self._nota("Modo Tamagotchi desligado: status pausados.")
+        self._separador()
+
+    def _retrato_da_fase(self):
+        fase = self.m.fase
+        if fase not in self._retrato:
+            grade = pixelart.animacoes(fase)["parado"][1][0]
+            self._retrato[fase] = grade_para_imagem(self.m.root, grade, max(2, self.e // 2))
+        return self._retrato[fase]
+
+    def _secao(self, texto):
+        tk.Label(self.corpo, text=texto, font=self.fonte_secao, fg=SECAO, bg=FUNDO, anchor="w",
+                 padx=2 * self.e).pack(fill="x", pady=(self.e, 0))
+
+    def _separador(self):
+        tk.Frame(self.corpo, height=1, bg=BORDA).pack(fill="x", pady=self.e, padx=self.e)
+
+    def _nota(self, texto):
+        tk.Label(self.corpo, text=texto, font=self.fonte_pequena, fg=APAGADO, bg=FUNDO, anchor="w",
+                 justify="left", wraplength=self.largura - 4 * self.e, padx=2 * self.e,
+                 pady=self.e // 2).pack(fill="x")
+
+    def _etiqueta(self, pai, texto, cor=APAGADO):
+        return tk.Label(pai, text=texto, font=self.fonte_pequena, fg=cor, bg=pai["bg"])
+
+    def _mini_barra(self, pai, valor):
+        """Cinco quadradinhos + o número, do lado direito do item."""
+        e = self.e
+        quadro = tk.Frame(pai, bg=pai["bg"])
+        c = tk.Canvas(quadro, width=5 * (e + 2), height=e + 2, bg=pai["bg"], highlightthickness=0, bd=0)
+        cheios = round(valor / 20)
+        for i in range(5):
+            x = i * (e + 2)
+            c.create_rectangle(x, 1, x + e, e + 1, width=0, fill=cor_do_valor(valor) if i < cheios else VAZIO)
+        c.pack(side="left")
+        tk.Label(quadro, text=f"{round(valor):>3}", font=self.fonte_pequena, fg=APAGADO, bg=pai["bg"],
+                 width=3, anchor="e").pack(side="left")
+        return quadro
+
+    def _linha(self, icone, texto, ao_clicar, negrito=False, destaque_cor=DESTAQUE, direita=None):
+        """Uma linha clicável com ícone, texto e algo opcional na direita."""
+        e = self.e
+        linha = tk.Frame(self.corpo, bg=FUNDO, padx=2 * e, pady=e, cursor="hand2")
+        linha.pack(fill="x")
+        tk.Label(linha, image=self.icones[icone], bg=FUNDO, width=6 * e).pack(side="left")
+        tk.Label(linha, text=texto, font=self.fonte_negrito if negrito else self.fonte, fg=TEXTO,
+                 bg=FUNDO, anchor="w", padx=2 * e).pack(side="left", fill="x", expand=True)
+        if direita is not None:
+            direita(linha).pack(side="right")
+        self._interativo(linha, ao_clicar, destaque_cor)
+        return linha
+
+    def _item(self, icone, texto, acao, fecha=True, negrito=False, destaque_cor=DESTAQUE, direita=None):
+        def clicar():
+            if fecha:
+                self.fechar()
+                self.m.root.after(10, acao)     # depois de fechar, pra ação poder abrir janelas
+            else:
+                acao()
+        return self._linha(icone, texto, clicar, negrito, destaque_cor, direita)
+
+    def _chave(self, icone, texto, ligado, alternar):
+        """Item com uma chavinha liga/desliga; o menu continua aberto e se redesenha."""
+        def clicar():
+            alternar()
+            self._montar()
+        return self._linha(icone, texto, clicar, direita=lambda pai: self._desenhar_chave(pai, ligado))
+
+    def _desenhar_chave(self, pai, ligado):
+        e = self.e
+        w, h = 7 * e, 4 * e
+        c = tk.Canvas(pai, width=w, height=h, bg=pai["bg"], highlightthickness=0, bd=0)
+        fundo = LARANJA if ligado else VAZIO
+        r = h // 2
+        c.create_oval(0, 0, h, h, fill=fundo, width=0)
+        c.create_oval(w - h, 0, w, h, fill=fundo, width=0)
+        c.create_rectangle(r, 0, w - r, h, fill=fundo, width=0)
+        bola = w - h + 2 if ligado else 2
+        c.create_oval(bola, 2, bola + h - 4, h - 2, fill=TEXTO, width=0)
+        return c
+
+    def _voltar(self, titulo):
+        e = self.e
+        topo = tk.Frame(self.corpo, bg=FUNDO, padx=2 * e, pady=e)
+        topo.pack(fill="x")
+        voltar = tk.Label(topo, text="‹ Voltar", font=self.fonte, fg=LARANJA, bg=FUNDO, cursor="hand2")
+        voltar.pack(side="left")
+        voltar.bind("<Button-1>", lambda ev: self._ir("principal"))
+        tk.Label(topo, text=titulo, font=self.fonte_titulo, fg=TEXTO, bg=FUNDO).pack(side="right")
+        self._separador()
+
+    def _interativo(self, linha, ao_clicar, destaque_cor):
+        """Destaca a linha inteira com o mouse em cima e chama ao_clicar no clique."""
+        widgets = [linha] + list(linha.winfo_children())
+        widgets += [neto for filho in linha.winfo_children() for neto in filho.winfo_children()]
+
+        def pintar(cor):
+            for w in widgets:
+                try:
+                    if isinstance(w, (tk.Frame, tk.Label)) or (isinstance(w, tk.Canvas) and w["bg"] in (FUNDO, DESTAQUE, destaque_cor)):
+                        w.config(bg=cor)
+                except tk.TclError:
+                    pass
+
+        def saiu(ev):
+            # Só apaga o destaque se o mouse saiu da linha mesmo (não só pra um filho dela)
+            dentro = linha.winfo_containing(ev.x_root, ev.y_root)
+            if dentro not in widgets:
+                pintar(FUNDO)
+
+        for w in widgets:
+            w.bind("<Enter>", lambda ev: pintar(destaque_cor))
+            w.bind("<Leave>", saiu)
+            w.bind("<ButtonRelease-1>", lambda ev: ao_clicar())

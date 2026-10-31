@@ -59,8 +59,10 @@ def _limitar(valor):
     return max(0.0, min(100.0, valor))
 
 
-def passar_tempo(d, horas, dormindo=False, sozinho=False, offline=False, taxas=TAXAS):
+def passar_tempo(d, horas, dormindo=False, sozinho=False, offline=False, taxas=TAXAS, mult_energia=1.0):
     """Aplica `horas` de vida aos dados do save (dict do clawd.json).
+
+    mult_energia multiplica o gasto de energia acordado (empanturrado de tokens = 1.5).
 
     Devolve a lista de eventos que aconteceram, por enquanto só "ficou_doente".
     """
@@ -72,7 +74,7 @@ def passar_tempo(d, horas, dormindo=False, sozinho=False, offline=False, taxas=T
         fome = taxas.fome_dormindo if dormindo else taxas.fome_acordado
         felicidade = taxas.felicidade_sozinho if sozinho else taxas.felicidade_presente
         sujeira = taxas.sujeira_dormindo if dormindo else taxas.sujeira_acordado
-    energia = taxas.energia_dormindo if dormindo else -taxas.energia_acordado
+    energia = taxas.energia_dormindo if dormindo else -taxas.energia_acordado * mult_energia
     if d["doente"]:
         energia -= taxas.energia_doente
         felicidade += taxas.felicidade_doente

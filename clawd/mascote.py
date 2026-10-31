@@ -3,13 +3,19 @@
 import logging
 import random
 import signal
+import subprocess
+import sys
+import threading
 import time
 import tkinter as tk
+from tkinter import simpledialog
 
-from . import config, fisica, interacao, necessidades, tela
+from . import config, fisica, interacao, necessidades, tela, tokens
 from .balao import Balao
+from .claude_code import ClaudeCode
 from .efeitos import Efeitos
 from .estado import Estado
+from .menu import MenuClawd
 from .painel import Painel
 from .sprites import BibliotecaSprites, criar_imagens_efeito
 from .tamagotchi import Tamagotchi
@@ -27,6 +33,8 @@ class Mascote:
         self.root.withdraw()
         self.root.title("Clawd")
         self.root.report_callback_exception = self._erro_em_callback
+        if config.ARQUIVO_ICONE.exists():
+            self.root.iconbitmap(default=str(config.ARQUIVO_ICONE))   # ícone do painel e dos diálogos
 
         self.demo = demo
         self.escala = config.escala_para_dpi(self.root.winfo_fpixels("1i"))
@@ -53,7 +61,7 @@ class Mascote:
 
         self._montar_janela()
         self.balao = Balao(self.root, config.COR_CHAVE, self.escala)
-        self.menu = self._criar_menu()
+        self.menu = MenuClawd(self)
 
         # Posição e movimento
         self.corpo = fisica.Corpo(*self._posicao_inicial())
@@ -84,6 +92,7 @@ class Mascote:
 
         # Necessidades, avisos e XP (precisa do save ainda sem o horário novo)
         self.tama = Tamagotchi(self)
+        self.cc = ClaudeCode(self)      # eventos dos hooks e tokens
         self.painel = Painel(self)
 
     # ------------------------------------------------------------------ montagem
@@ -111,46 +120,34 @@ class Mascote:
         # Mouse passando por cima sem apertar = esfregar (banho)
         self.canvas.bind("<Motion>", lambda e: self.tama.esfregar(e.x_root, e.y_root))
 
-    def _criar_menu(self):
-        m = tk.Menu(self.root, tearoff=0, postcommand=self._atualizar_menu)
-        m.add_command(label="🍖  Alimentar", command=self.alimentar)
-        m.add_command(label="⚽  Brincar", command=self.brincar)
-        m.add_command(label="💤  Dormir", command=self._dormir_ou_acordar)
-        m.add_command(label="💊  Remédio", command=self.dar_remedio)
-        m.add_separator()
-        m.add_command(label="📊  Status", command=self.mostrar_status)
-        m.add_command(label="☁️  Clima", command=self.mostrar_clima)
-        # Submenu com um item por monitor (montado de novo toda vez que o menu abre)
-        self.menu_monitores = tk.Menu(m, tearoff=0)
-        self.var_monitor = tk.StringVar(self.root, value=self.monitor.nome)
-        m.add_cascade(label="🖥  Monitor", menu=self.menu_monitores)
-        m.add_separator()
-        self.var_modo = tk.BooleanVar(self.root, value=self.estado.dados["modo_tamagotchi"])
-        m.add_checkbutton(label="Modo Tamagotchi", variable=self.var_modo,
-                          command=lambda: self.tama.mudar_modo(self.var_modo.get()))
-        m.add_separator()
-        m.add_command(label="Sair", command=self.sair)
-        return m
+    def _perguntar_meta(self):
+        cc = self.cc
+        tipo = "só input + output" if cc.so_io else "total, com cache"
+        semana = tokens.formatar(cc.contar(cc.semana)) if cc.semana else "contando..."
+        atual = cc.meta()
+        texto = simpledialog.askstring(
+            "Meta semanal de tokens",
+            f"Meta de tokens por semana ({tipo}).\nExemplos: 150M, 800k. Vazio = sem meta.\n\n"
+            f"Uso deste PC nos últimos 7 dias: {semana}",
+            initialvalue=tokens.formatar(atual) if atual else "", parent=self.root)
+        if texto is None:
+            return
+        try:
+            cc.definir_meta(tokens.ler_numero(texto))
+            self.salvar()
+        except ValueError:
+            self.falar("Não entendi esse número 🤔\nTenta algo como 150M", 3)
 
-    def _atualizar_menu(self):
-        # Ajusta os itens toda vez que o menu abre
-        dormindo = self.acao == "dormindo"
-        self.menu.entryconfigure(2, label="☀️  Acordar" if dormindo else "💤  Dormir")
-        doente = self.estado.dados["doente"] and self.tama.ativo
-        self.menu.entryconfigure(3, state="normal" if doente else "disabled")
-        self.var_modo.set(self.estado.dados["modo_tamagotchi"])
+    def _reinstalar_hooks(self):
+        # Roda o instalador numa thread e conta o resultado no balão
+        script = config.PASTA_BASE / "instalar_hooks.py"
 
-        # Relê os monitores (pode ter plugado ou tirado um) e remonta o submenu
-        self.monitores = tela.monitores(self.root)
-        self.menu_monitores.delete(0, "end")
-        for mon in self.monitores:
-            self.menu_monitores.add_radiobutton(
-                label=mon.rotulo, value=mon.nome, variable=self.var_monitor,
-                command=lambda nome=mon.nome: self.trocar_monitor(nome))
-        self.var_monitor.set(self.monitor.nome)
-        self.menu.entryconfigure(self.INDICE_MONITOR, state="normal" if len(self.monitores) > 1 else "disabled")
-
-    INDICE_MONITOR = 7     # posição do "Monitor" no menu (separadores contam)
+        def rodar():
+            r = subprocess.run([sys.executable, str(script)], capture_output=True, text=True,
+                               cwd=str(config.PASTA_BASE), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            texto = "Hooks reinstalados! 🔌" if r.returncode == 0 else "Não consegui instalar\nos hooks 😢"
+            self.root.after(0, lambda: self.falar(texto, 3))
+        threading.Thread(target=rodar, daemon=True).start()
 
     def _biblioteca(self, fase):
         if fase not in self._bibliotecas:
@@ -232,10 +229,20 @@ class Mascote:
 
     def sair(self):
         self.salvar()
+        self.painel.fechar()
+        self.menu.fechar()
+        # Cancela os loops agendados pra não sobrar callback apontando pra janela fechada.
+        # Cada um no seu try: se um falhar, o destroy ainda tem que acontecer.
         try:
-            # Cancela os loops agendados pra não sobrar callback apontando pra janela fechada
-            for pendente in self.root.tk.splitlist(self.root.tk.call("after", "info")):
+            pendentes = self.root.tk.splitlist(self.root.tk.call("after", "info"))
+        except tk.TclError:
+            pendentes = ()
+        for pendente in pendentes:
+            try:
                 self.root.after_cancel(pendente)
+            except tk.TclError:
+                pass
+        try:
             self.root.destroy()
         except tk.TclError:
             pass
@@ -291,6 +298,9 @@ class Mascote:
         """O que fazer quando a ação atual acaba."""
         if self.fase == "ovo":
             self.mudar("parado", random.uniform(3, 8))    # ovo não anda
+            return
+        if self.cc.empanturrado and random.random() < 0.4:
+            self.mudar("empanturrado", random.uniform(3, 6))   # cheio de tokens, fica molenga
             return
         r = random.random()
         if r < 0.55:
@@ -348,12 +358,6 @@ class Mascote:
         self._ajustar("fome", -3)
         self.tama.ganhar_xp(config.XP_BRINCAR)
         self.falar("Iupi!")
-
-    def _dormir_ou_acordar(self):
-        if self.acao == "dormindo":
-            self.acordar("Bom dia! ☀️")
-        else:
-            self.dormir()
 
     def dormir(self, texto="Boa noite... 💤"):
         # Sem prazo: o Tamagotchi acorda ele quando a energia enche (ou um clique)
@@ -501,6 +505,7 @@ class Mascote:
 
     def _clique(self):
         """Carinho: coraçãozinho e um pouco de felicidade."""
+        self.cc.parar_espera()          # clicar nele também conta como "voltei"
         if self.acao == "dormindo":
             self.acordar("Hm? Acordei!")
             return
@@ -511,12 +516,9 @@ class Mascote:
 
     def _abrir_menu(self, e):
         if self.acao == "andando":
-            self.mudar("parado", 5)    # não sai andando com o menu aberto
-        try:
-            self.menu.tk_popup(e.x_root, e.y_root)
-            self.menu.grab_release()
-        except tk.TclError:
-            pass    # "Sair" fecha a janela antes do menu terminar de voltar
+            self.mudar("parado", 8)    # não sai andando com o menu aberto
+        self.monitores = tela.monitores(self.root)   # pode ter plugado ou tirado um monitor
+        self.menu.abrir(e.x_root, e.y_root)
 
     # ------------------------------------------------------------------ loop
 
@@ -560,6 +562,7 @@ class Mascote:
             self._fim_da_acao()
 
         self.tama.tick()
+        self.cc.tick()
         self.efeitos.atualizar(dt, self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala,
                                self.alt_janela - self.sprites.altura_corpo / 2)
 
@@ -638,6 +641,10 @@ class Mascote:
         ("tonto", "tonto 😵"),
         ("escondido", "escondido"),
         ("espirrando", "espirrando 🤧"),
+        ("digitando", "digitando (Claude trabalhando)"),
+        ("caido", "caído 💀 (teste falhou)"),
+        ("mao_na_cabeca", "facepalm 🤦 (erro no terminal)"),
+        ("empanturrado", "empanturrado 😪 (meta de tokens)"),
         ("chocando", "chocando 🥚"),
     ]
 
