@@ -1,4 +1,4 @@
-"""Inicia o Clawd. Uso: python main.py [--demo]"""
+"""Inicia o Clawd. Uso: python main.py [--demo [--fase ovo|filhote|clawd|anciao]]"""
 
 import argparse
 import logging
@@ -9,6 +9,8 @@ from clawd import config, tela
 def main():
     parser = argparse.ArgumentParser(description="Clawd, mascote de desktop")
     parser.add_argument("--demo", action="store_true", help="mostra todas as animações e não salva")
+    parser.add_argument("--fase", choices=("ovo", "filhote", "clawd", "anciao"),
+                        help="na demo, mostra essa fase de evolução")
     args = parser.parse_args()
 
     logging.basicConfig(filename=config.ARQUIVO_LOG, encoding="utf-8", level=logging.INFO,
@@ -21,7 +23,7 @@ def main():
         return
 
     from clawd.mascote import Mascote
-    Mascote(demo=args.demo).rodar()
+    Mascote(demo=args.demo, fase_demo=args.fase if args.demo else None).rodar()
 
 
 if __name__ == "__main__":

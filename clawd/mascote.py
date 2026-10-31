@@ -6,11 +6,13 @@ import signal
 import time
 import tkinter as tk
 
-from . import config, fisica, interacao, pixelart, tela
+from . import config, fisica, interacao, necessidades, tela
 from .balao import Balao
 from .efeitos import Efeitos
 from .estado import Estado
-from .sprites import BibliotecaSprites
+from .painel import Painel
+from .sprites import BibliotecaSprites, criar_imagens_efeito
+from .tamagotchi import Tamagotchi
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ FALAS_CARINHO = ["Hehe ♥", "Gostei!", "Mais!", "♥"]
 
 
 class Mascote:
-    def __init__(self, demo=False, arquivo_estado=config.ARQUIVO_ESTADO):
+    def __init__(self, demo=False, arquivo_estado=config.ARQUIVO_ESTADO, fase_demo=None):
         tela.ativar_dpi()   # precisa vir antes de criar o Tk
         self.root = tk.Tk()
         self.root.withdraw()
@@ -30,8 +32,19 @@ class Mascote:
         self.escala = config.escala_para_dpi(self.root.winfo_fpixels("1i"))
         self.k = self.escala / 4        # multiplica velocidades pensadas pra escala 4
         self.estado = Estado.carregar(arquivo_estado)
-        self.sprites = BibliotecaSprites(self.root, self.escala, config.PASTA_SPRITES)
-        self.area = tela.area_de_trabalho(self.root)
+
+        # Fase de evolução: a do save, corrigida se o XP não bater
+        fase = self.estado.dados.get("fase")
+        if fase not in necessidades.ORDEM_FASE:
+            fase = necessidades.fase_por_xp(self.estado.dados["xp"])
+        self.fase = fase_demo or fase
+        self._fase_pendente = None      # fase que vem depois de chocar
+        self._bibliotecas = {}
+        self.sprites = self._biblioteca(self.fase)
+        self.imagens_efeito = criar_imagens_efeito(self.root, self.escala)
+        self.monitores = tela.monitores(self.root)
+        self.monitor = self._monitor_inicial()
+        self.area = self.monitor.area
         self.params = fisica.Parametros(
             gravidade=config.GRAVIDADE * self.k, quique_parede=config.QUIQUE_PAREDE,
             quique_chao=config.QUIQUE_CHAO, atrito_chao=config.ATRITO_CHAO * self.k,
@@ -69,6 +82,10 @@ class Mascote:
         self._pos_janela = None
         self._ultimo_tick = time.perf_counter()
 
+        # Necessidades, avisos e XP (precisa do save ainda sem o horário novo)
+        self.tama = Tamagotchi(self)
+        self.painel = Painel(self)
+
     # ------------------------------------------------------------------ montagem
 
     def _montar_janela(self):
@@ -85,29 +102,94 @@ class Mascote:
         self.canvas.pack()
         # Âncora "s": os pés ficam no meio da borda de baixo da janela
         self.item_sprite = self.canvas.create_image(self.larg_janela / 2, self.alt_janela, anchor="s")
-        self.efeitos = Efeitos(self.canvas, self.sprites.efeitos, self.item_sprite, self.k)
+        self.efeitos = Efeitos(self.canvas, self.imagens_efeito, self.item_sprite, self.k)
 
         self.canvas.bind("<ButtonPress-1>", self._apertou)
         self.canvas.bind("<B1-Motion>", self._moveu)
         self.canvas.bind("<ButtonRelease-1>", self._soltou)
         self.canvas.bind("<ButtonPress-3>", self._abrir_menu)
+        # Mouse passando por cima sem apertar = esfregar (banho)
+        self.canvas.bind("<Motion>", lambda e: self.tama.esfregar(e.x_root, e.y_root))
 
     def _criar_menu(self):
-        m = tk.Menu(self.root, tearoff=0)
+        m = tk.Menu(self.root, tearoff=0, postcommand=self._atualizar_menu)
         m.add_command(label="🍖  Alimentar", command=self.alimentar)
         m.add_command(label="⚽  Brincar", command=self.brincar)
-        m.add_command(label="💤  Dormir", command=self.dormir)
+        m.add_command(label="💤  Dormir", command=self._dormir_ou_acordar)
+        m.add_command(label="💊  Remédio", command=self.dar_remedio)
         m.add_separator()
         m.add_command(label="📊  Status", command=self.mostrar_status)
         m.add_command(label="☁️  Clima", command=self.mostrar_clima)
+        # Submenu com um item por monitor (montado de novo toda vez que o menu abre)
+        self.menu_monitores = tk.Menu(m, tearoff=0)
+        self.var_monitor = tk.StringVar(self.root, value=self.monitor.nome)
+        m.add_cascade(label="🖥  Monitor", menu=self.menu_monitores)
+        m.add_separator()
+        self.var_modo = tk.BooleanVar(self.root, value=self.estado.dados["modo_tamagotchi"])
+        m.add_checkbutton(label="Modo Tamagotchi", variable=self.var_modo,
+                          command=lambda: self.tama.mudar_modo(self.var_modo.get()))
         m.add_separator()
         m.add_command(label="Sair", command=self.sair)
         return m
+
+    def _atualizar_menu(self):
+        # Ajusta os itens toda vez que o menu abre
+        dormindo = self.acao == "dormindo"
+        self.menu.entryconfigure(2, label="☀️  Acordar" if dormindo else "💤  Dormir")
+        doente = self.estado.dados["doente"] and self.tama.ativo
+        self.menu.entryconfigure(3, state="normal" if doente else "disabled")
+        self.var_modo.set(self.estado.dados["modo_tamagotchi"])
+
+        # Relê os monitores (pode ter plugado ou tirado um) e remonta o submenu
+        self.monitores = tela.monitores(self.root)
+        self.menu_monitores.delete(0, "end")
+        for mon in self.monitores:
+            self.menu_monitores.add_radiobutton(
+                label=mon.rotulo, value=mon.nome, variable=self.var_monitor,
+                command=lambda nome=mon.nome: self.trocar_monitor(nome))
+        self.var_monitor.set(self.monitor.nome)
+        self.menu.entryconfigure(self.INDICE_MONITOR, state="normal" if len(self.monitores) > 1 else "disabled")
+
+    INDICE_MONITOR = 7     # posição do "Monitor" no menu (separadores contam)
+
+    def _biblioteca(self, fase):
+        if fase not in self._bibliotecas:
+            self._bibliotecas[fase] = BibliotecaSprites(self.root, self.escala, config.PASTA_SPRITES, fase)
+        return self._bibliotecas[fase]
 
     def _limites(self):
         a = self.area
         return fisica.Limites(a.esquerda, a.direita, a.topo, a.base,
                               self.sprites.meia_largura, self.sprites.altura_corpo)
+
+    def _monitor_inicial(self):
+        """O monitor salvo; se não tiver, o do lugar favorito; senão o principal."""
+        d = self.estado.dados
+        if d.get("monitor") in {m.nome for m in self.monitores}:
+            return tela.monitor_por_nome(self.monitores, d["monitor"])
+        fav = d.get("lugar_favorito")
+        if isinstance(fav, dict) and isinstance(fav.get("x"), (int, float)) and isinstance(fav.get("y"), (int, float)):
+            return tela.monitor_no_ponto(self.monitores, fav["x"], fav["y"] - 1)
+        return self.monitores[0]
+
+    def trocar_monitor(self, nome):
+        """Leva o Clawd pro outro monitor: ele cai lá do alto, no meio da tela."""
+        novo = tela.monitor_por_nome(self.monitores, nome)
+        if novo.nome != nome or self.acao == "pendurado":
+            return
+        self.monitor = novo
+        self.area = novo.area
+        self.estado.dados["monitor"] = novo.nome
+        lim = self._limites()
+        self.corpo.x = (lim.esquerda + lim.direita) / 2
+        self.corpo.y = lim.topo + lim.altura
+        self.corpo.vx = self.corpo.vy = 0.0
+        self.corpo.no_chao = False
+        self.salto = self.salto_v = 0.0
+        self.arremessado = True               # pra ele comentar quando pousar
+        self.mudar("caindo")
+        self.falar("Mudei de monitor! 🖥️", 1.5)
+        self.salvar()
 
     def _posicao_inicial(self):
         """Volta pro lugar favorito (onde foi solto por último), ou nasce no meio do chão."""
@@ -134,7 +216,7 @@ class Mascote:
             self.mudar("caindo")
         else:
             self.mudar("acenando", 2.5)
-            self.falar("Oi! 👋")
+            self.falar(self.tama.boas_vindas() or "Oi! 👋")
 
         signal.signal(signal.SIGINT, lambda *_: self.root.after_idle(self.sair))
         self.root.after(config.TICK_MS, self._tick)
@@ -149,7 +231,7 @@ class Mascote:
             self.sair()
 
     def sair(self):
-        self._salvar()
+        self.salvar()
         try:
             # Cancela os loops agendados pra não sobrar callback apontando pra janela fechada
             for pendente in self.root.tk.splitlist(self.root.tk.call("after", "info")):
@@ -158,14 +240,14 @@ class Mascote:
         except tk.TclError:
             pass
 
-    def _salvar(self):
+    def salvar(self):
         if self.demo:
             return
         self.estado.dados["ultima_posicao"] = {"x": round(self.corpo.x), "y": round(self.corpo.y)}
         self.estado.salvar()
 
     def _autosave(self):
-        self._salvar()
+        self.salvar()
         self.root.after(config.AUTOSAVE_MS, self._autosave)
 
     def _manter_por_cima(self):
@@ -175,10 +257,15 @@ class Mascote:
         self.root.after(config.TOPMOST_MS, self._manter_por_cima)
 
     def _reler_area(self):
-        # Pega mudança de resolução ou da barra de tarefas
-        nova = tela.area_de_trabalho(self.root)
-        if nova != self.area:
-            self.area = nova
+        # Pega monitor desligado, mudança de resolução ou da barra de tarefas
+        self.monitores = tela.monitores(self.root)
+        atual = tela.monitor_por_nome(self.monitores, self.monitor.nome)
+        if atual.nome != self.monitor.nome:
+            # O monitor dele sumiu: volta pro principal
+            self.trocar_monitor(atual.nome)
+        elif atual.area != self.area:
+            self.monitor = atual
+            self.area = nova = atual.area
             if self.acao not in ("caindo", "pendurado"):
                 self.corpo.y = nova.base
                 lim = self._limites()
@@ -202,6 +289,9 @@ class Mascote:
 
     def _decidir_proxima(self):
         """O que fazer quando a ação atual acaba."""
+        if self.fase == "ovo":
+            self.mudar("parado", random.uniform(3, 8))    # ovo não anda
+            return
         r = random.random()
         if r < 0.55:
             if random.random() < 0.4:
@@ -213,46 +303,133 @@ class Mascote:
             self.mudar("parado", random.uniform(2, 6))
 
     def _fim_da_acao(self):
-        if self.acao == "dormindo":
-            self.acordar()
-        elif self.acao == "tonto":
+        if self.acao == "tonto":
             self.tonto_pendente = False
             self.efeitos.estrelas_girando(False)
             self.falar("Passou...", 1.5)
             self.mudar("parado", 1.5)
+        elif self.acao == "chocando" and self._fase_pendente:
+            self._evoluir(self._fase_pendente)
         elif self.acao == "parado":
             self._decidir_proxima()
         else:
             self.mudar("parado", random.uniform(1.5, 4))
 
+    def _ajustar(self, nome, delta):
+        """Mexe num status só quando o modo Tamagotchi está valendo."""
+        if self.tama.ativo:
+            self.estado.ajustar_status(nome, delta)
+
     def alimentar(self):
+        if self.fase == "ovo":
+            self.falar("Sou um ovo, ainda não como 🥚\nFaz carinho pra eu chocar!", 3)
+            return
+        if self.tama.ativo and self.estado.status["fome"] >= 95:
+            self.falar("Tô cheio! 😋", 2)
+            return
         self.mudar("comendo", 3)
-        self.estado.ajustar_status("fome", 25)
+        self._ajustar("fome", 25)
+        self._ajustar("felicidade", 3)
+        self.tama.ganhar_xp(config.XP_ALIMENTAR)
         self.falar("Nham nham! 🍤")
 
     def brincar(self):
-        if self.estado.status["energia"] < 15:
+        if self.fase == "ovo":
+            self.mudar("comemorando", 2)
+            self.tama.ganhar_xp(2)
+            self.falar("Rolei! 🥚", 1.5)
+            return
+        if self.tama.ativo and self.estado.status["energia"] < 15:
             self.falar("Tô cansadinho... 😴")
             return
         self.mudar("comemorando", 2.6)
-        self.estado.ajustar_status("felicidade", 10)
-        self.estado.ajustar_status("energia", -5)
-        self.estado.ajustar_status("fome", -3)
+        self._ajustar("felicidade", 10)
+        self._ajustar("energia", -5)
+        self._ajustar("fome", -3)
+        self.tama.ganhar_xp(config.XP_BRINCAR)
         self.falar("Iupi!")
 
-    def dormir(self):
-        self.mudar("dormindo", 45)
-        self.falar("Boa noite... 💤", 2.5)
+    def _dormir_ou_acordar(self):
+        if self.acao == "dormindo":
+            self.acordar("Bom dia! ☀️")
+        else:
+            self.dormir()
+
+    def dormir(self, texto="Boa noite... 💤"):
+        # Sem prazo: o Tamagotchi acorda ele quando a energia enche (ou um clique)
+        self.mudar("dormindo")
+        self.falar(texto, 2.5)
 
     def acordar(self, texto="Que soneca boa!"):
-        self.estado.ajustar_status("energia", 10)
+        self.tama.acordado_em = time.time()
         self.mudar("parado", 2)
         self.falar(texto, 2)
 
+    def dar_remedio(self):
+        if not self.estado.dados["doente"]:
+            self.falar("Não tô doente! 💪", 2)
+            return
+        self.estado.dados["doente"] = False
+        self.estado.dados["horas_com_fome"] = 0.0
+        self.mudar("comendo", 1.5)
+        self.tama.ganhar_xp(config.XP_REMEDIO)
+        self.falar("Eca, que gosto ruim...\nmas já tô melhor! 💊", 3)
+        self.salvar()
+
+    def espirrar(self):
+        self.mudar("espirrando", 1.2)
+        self.falar("Atchim! 🤧", 1.2)
+        self.root.after(300, lambda: self.efeitos.gotas(
+            self.larg_janela / 2 + 4 * self.escala * self.direcao,
+            self.alt_janela - self.sprites.altura_corpo / 2, self.direcao))
+
+    def bolha_em(self, x_tela, y_tela):
+        """Bolha de sabão onde o mouse está esfregando."""
+        self.efeitos.bolha(x_tela - self.root.winfo_rootx(), y_tela - self.root.winfo_rooty())
+
     def mostrar_status(self):
-        s = self.estado.status
-        self.falar(f"🍖 Fome: {s['fome']}\n💤 Energia: {s['energia']}\n"
-                   f"😊 Felicidade: {s['felicidade']}", 5)
+        self.painel.abrir()
+
+    # ------------------------------------------------------------------ evolução
+
+    def verificar_evolucao(self):
+        """Evolui quando o XP passa do mínimo da próxima fase (nunca regride)."""
+        nova = necessidades.fase_por_xp(self.estado.dados["xp"])
+        ordem = necessidades.ORDEM_FASE
+        if self.demo or ordem[nova] <= ordem[self.fase] or self.acao not in ("parado", "andando"):
+            return
+        if self.fase == "ovo":
+            # Primeiro a casca racha, depois ele nasce (_fim_da_acao chama _evoluir)
+            self._fase_pendente = nova
+            self.mudar("chocando", 3)
+            self.falar("Crec... crec...", 2.5)
+        else:
+            self._evoluir(nova)
+
+    def _evoluir(self, nova):
+        antiga = self.fase
+        self.fase = nova
+        self.estado.dados["fase"] = nova
+        self.sprites = self._biblioteca(nova)
+        self._ajustar_janela()
+        self._img_atual = None
+        self.mudar("comemorando", 3)
+        if antiga == "ovo":
+            self.falar("Nasci! 🐣\nOi, eu sou o Clawd!", 4)
+        else:
+            self.falar(f"Evoluí! Agora sou\n{necessidades.NOMES_FASE[nova]}! ✨", 4)
+        self.salvar()
+
+    def _ajustar_janela(self):
+        # PNGs de fases diferentes podem ter tamanhos diferentes
+        e = self.escala
+        larg = self.sprites.largura_max + 2 * config.MARGEM_LATERAL * e
+        alt = self.sprites.altura_max + config.MARGEM_TOPO * e
+        if (larg, alt) != (self.larg_janela, self.alt_janela):
+            self.larg_janela, self.alt_janela = larg, alt
+            self.canvas.config(width=larg, height=alt)
+            self.canvas.coords(self.item_sprite, larg / 2, alt)
+            self._pos_janela = None
 
     def mostrar_clima(self):
         self.falar("Ainda não sei olhar o céu...\n(o clima chega na fase 4) ☁️", 4)
@@ -310,6 +487,14 @@ class Mascote:
             self.arremessado = False
         self.corpo.vx, self.corpo.vy = vx, vy
         self.corpo.no_chao = False
+        # Solto em cima de outro monitor: passa a morar nele
+        onde = tela.monitor_no_ponto(self.monitores, e.x_root, e.y_root)
+        if onde.nome != self.monitor.nome:
+            self.monitor = onde
+            self.area = onde.area
+            lim = self._limites()
+            self.corpo.x = min(max(self.corpo.x, lim.esquerda + lim.meia_largura), lim.direita - lim.meia_largura)
+            self.corpo.y = min(max(self.corpo.y, lim.topo + lim.altura), lim.chao)
         if vx:
             self.direcao = 1 if vx > 0 else -1
         self.mudar("caindo")
@@ -320,7 +505,7 @@ class Mascote:
             self.acordar("Hm? Acordei!")
             return
         self.efeitos.coracao(self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala)
-        self.estado.ajustar_status("felicidade", config.GANHO_CARINHO)
+        self.tama.carinho()
         if random.random() < 0.3:
             self.falar(random.choice(FALAS_CARINHO), 1.5)
 
@@ -359,9 +544,9 @@ class Mascote:
             self._prox_particula = agora + 1.3
             self.efeitos.zzz(self.larg_janela / 2 + 5 * self.escala * self.direcao,
                              self._cabeca_no_canvas() + 2 * self.escala, self.direcao)
-        elif a == "comendo" and agora >= self._prox_particula:
+        elif a == "comendo" and agora >= self._prox_particula and self.fase != "ovo":
             self._prox_particula = agora + 0.35
-            boca_y = self.alt_janela - (pixelart.ALTURA - pixelart.CORPO_TOPO - 5) * self.escala
+            boca_y = self.alt_janela - self.sprites.altura_corpo * 0.45
             self.efeitos.migalhas(self.larg_janela / 2, boca_y)
 
         # Pulinho (continua até encostar no chão mesmo depois da comemoração acabar)
@@ -374,11 +559,16 @@ class Mascote:
         if self.acao_ate is not None and agora >= self.acao_ate:
             self._fim_da_acao()
 
-        self.efeitos.atualizar(dt, self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala)
+        self.tama.tick()
+        self.efeitos.atualizar(dt, self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala,
+                               self.alt_janela - self.sprites.altura_corpo / 2)
 
     def _andar(self, dt):
         lim = self._limites()
-        self.corpo.x += self.direcao * config.VELOCIDADE_ANDAR * self.k * dt
+        velocidade = config.VELOCIDADE_ANDAR * self.k
+        if self.tama.ativo and (self.estado.dados["doente"] or self.estado.status["energia"] < 30):
+            velocidade *= 0.5      # cansado ou gripado anda devagar
+        self.corpo.x += self.direcao * velocidade * dt
         # Vira quando chega na borda da tela
         if self.corpo.x - lim.meia_largura <= lim.esquerda:
             self.corpo.x = lim.esquerda + lim.meia_largura
@@ -403,10 +593,11 @@ class Mascote:
         if not self.demo:
             # Lugar favorito: onde foi solto por último
             self.estado.dados["lugar_favorito"] = {"x": round(self.corpo.x), "y": round(self.corpo.y)}
-            self._salvar()
+            self.estado.dados["monitor"] = self.monitor.nome
+            self.salvar()
         if self.tonto_pendente:
             self.mudar("tonto", config.TONTO_SEGUNDOS)
-            self.estado.ajustar_status("felicidade", -config.PERDA_TONTURA)
+            self._ajustar("felicidade", -config.PERDA_TONTURA)
             self.falar("Tô tontinho... 😵", 2.5)
         else:
             if self.arremessado:
@@ -446,10 +637,12 @@ class Mascote:
         ("caindo", "caindo!"),
         ("tonto", "tonto 😵"),
         ("escondido", "escondido"),
+        ("espirrando", "espirrando 🤧"),
+        ("chocando", "chocando 🥚"),
     ]
 
     def _demo(self, i):
-        """Passa por todas as animações, 3,5 s cada. Uso: python main.py --demo"""
+        """Passa por todas as animações, 3,5 s cada. Uso: python main.py --demo [--fase anciao]"""
         if i >= len(self.DEMO):
             self.efeitos.estrelas_girando(False)
             self.corpo.y = self.area.base
@@ -457,6 +650,9 @@ class Mascote:
             self.falar("Fim da demo!", 2)
             return
         acao, texto = self.DEMO[i]
+        if acao not in self.sprites.animacoes:
+            self._demo(i + 1)       # ex.: só o ovo choca, só o Clawd espirra
+            return
         self.efeitos.estrelas_girando(acao == "tonto")
         if acao == "pendurado":
             self.corpo.y = self.area.base - 120 * self.k

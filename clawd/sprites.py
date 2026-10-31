@@ -1,8 +1,8 @@
 """Carrega os quadros de cada animação: PNGs da pasta sprites/ ou o Clawd provisório.
 
 Procura, nesta ordem:
-  sprites/<fase>/<animacao>/*.png   (quando a fase de evolução tiver arte própria)
-  sprites/<animacao>/*.png
+  sprites/<fase>/<animacao>/*.png   (fases: ovo, filhote, clawd, anciao)
+  sprites/<animacao>/*.png          (só pra fase clawd, o adulto)
   desenho provisório de pixelart.py
 Os PNGs são lidos em ordem alfabética e devem estar virados pra direita.
 Um anim.json opcional na pasta define a velocidade: {"ms": 120}
@@ -17,11 +17,26 @@ from . import pixelart
 log = logging.getLogger(__name__)
 
 
+def _grade_para_imagem(root, grade, escala):
+    img = tk.PhotoImage(master=root, width=grade.largura, height=grade.altura)
+    for y, linha in enumerate(grade.px):
+        for x, cor in enumerate(linha):
+            if cor:
+                img.put(cor, to=(x, y))
+    # Zoom inteiro mantém o pixel nítido e a transparência
+    return img.zoom(escala)
+
+
+def criar_imagens_efeito(root, escala):
+    """Coração, Zzz, mosquinha etc. Ficam fora da biblioteca porque não mudam com a fase."""
+    escala_efeito = max(2, escala - 1)
+    return {nome: _grade_para_imagem(root, g, escala_efeito) for nome, g in pixelart.EFEITOS.items()}
+
+
 class BibliotecaSprites:
-    def __init__(self, root, escala, pasta, fase=None):
+    def __init__(self, root, escala, pasta, fase="clawd"):
         self.root = root
         self.escala = escala
-        self.escala_efeito = max(2, escala - 1)
         self.pasta = pasta
         self.fase = fase
         self._de_grade = {}      # id(grade) -> imagem (quadros repetidos usam a mesma)
@@ -29,17 +44,14 @@ class BibliotecaSprites:
         self.usando_png = set()
         self.animacoes = {}      # nome -> (ms, quadros_direita, quadros_esquerda)
 
-        for nome, (ms, grades) in pixelart.ANIMACOES.items():
+        for nome, (ms, grades) in pixelart.animacoes(fase).items():
             png = self._carregar_pngs(nome)
             if png:
                 quadros, ms = png[0], png[1] or ms
                 self.usando_png.add(nome)
             else:
-                quadros = [self._grade_para_imagem(g, escala) for g in grades]
+                quadros = [self._da_grade(g) for g in grades]
             self.animacoes[nome] = (ms, quadros, [self._espelhar(q) for q in quadros])
-
-        self.efeitos = {nome: self._grade_para_imagem(g, self.escala_efeito)
-                        for nome, g in pixelart.EFEITOS.items()}
 
     # --- tamanhos usados pra montar a janela e a física ---
 
@@ -56,14 +68,14 @@ class BibliotecaSprites:
         """Distância dos pés ao topo da cabeça, em pixels de tela."""
         if "parado" in self.usando_png:
             return round(self.animacoes["parado"][1][0].height() * 0.9)
-        return (pixelart.ALTURA - pixelart.CORPO_TOPO) * self.escala
+        return pixelart.medidas(self.fase)[0] * self.escala
 
     @property
     def meia_largura(self):
         """Metade da largura do corpo com os bracinhos (pra bater nas bordas)."""
         if "parado" in self.usando_png:
             return round(self.animacoes["parado"][1][0].width() * 0.4)
-        return 9 * self.escala
+        return pixelart.medidas(self.fase)[1] * self.escala
 
     def quadro(self, nome, ms_desde_inicio, virado_esquerda=False):
         """Imagem da animação no instante pedido."""
@@ -73,18 +85,10 @@ class BibliotecaSprites:
 
     # --- conversões ---
 
-    def _grade_para_imagem(self, grade, escala):
-        if id(grade) in self._de_grade:
-            return self._de_grade[id(grade)]
-        img = tk.PhotoImage(master=self.root, width=grade.largura, height=grade.altura)
-        for y, linha in enumerate(grade.px):
-            for x, cor in enumerate(linha):
-                if cor:
-                    img.put(cor, to=(x, y))
-        # Zoom inteiro mantém o pixel nítido e a transparência
-        img = img.zoom(escala)
-        self._de_grade[id(grade)] = img
-        return img
+    def _da_grade(self, grade):
+        if id(grade) not in self._de_grade:
+            self._de_grade[id(grade)] = _grade_para_imagem(self.root, grade, self.escala)
+        return self._de_grade[id(grade)]
 
     def _espelhar(self, img):
         if id(img) not in self._espelhadas:
@@ -92,7 +96,9 @@ class BibliotecaSprites:
         return self._espelhadas[id(img)]
 
     def _carregar_pngs(self, nome):
-        pastas = ([self.pasta / self.fase / nome] if self.fase else []) + [self.pasta / nome]
+        pastas = [self.pasta / self.fase / nome]
+        if self.fase == "clawd":
+            pastas.append(self.pasta / nome)
         for pasta in pastas:
             arquivos = sorted(pasta.glob("*.png")) if pasta.is_dir() else []
             if not arquivos:

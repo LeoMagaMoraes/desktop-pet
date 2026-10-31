@@ -1,4 +1,4 @@
-"""Partículas em volta do Clawd: coração, Zzz, migalhas e estrelinhas de tontura."""
+"""Partículas em volta do Clawd: coração, Zzz, migalhas, bolhas, gotas, estrelinhas e mosquinhas."""
 
 import math
 import random
@@ -17,6 +17,8 @@ class Efeitos:
         self.particulas = []
         self.estrelas = []
         self.angulo = 0.0
+        self.moscas = []
+        self.tempo = 0.0
 
     def _soltar(self, tipo, x, y, vx, vy, vida, gravidade=0.0, balanco=0.0):
         p = _Particula()
@@ -41,6 +43,23 @@ class Efeitos:
             self._soltar("migalha", x, y, random.uniform(-50, 50) * k,
                          random.uniform(-120, -50) * k, 0.8, gravidade=600 * k)
 
+    def bolha(self, x, y):
+        k = self.k
+        self._soltar("bolha", x, y, random.uniform(-15, 15) * k, -35 * k, 0.9, balanco=4 * k)
+
+    def gotas(self, x, y, direcao):
+        k = self.k
+        for _ in range(4):
+            self._soltar("gota", x, y, direcao * random.uniform(60, 140) * k,
+                         random.uniform(-80, -10) * k, 0.6, gravidade=500 * k)
+
+    def quantidade_moscas(self, n):
+        """Deixa exatamente n mosquinhas voando em volta dele."""
+        while len(self.moscas) < n:
+            self.moscas.append(self.canvas.create_image(-50, -50, image=self.imagens["mosca"]))
+        while len(self.moscas) > n:
+            self.canvas.delete(self.moscas.pop())
+
     def estrelas_girando(self, ligar):
         if ligar and not self.estrelas:
             self.estrelas = [self.canvas.create_image(-50, -50, image=self.imagens["estrela"])
@@ -50,8 +69,9 @@ class Efeitos:
                 self.canvas.delete(item)
             self.estrelas = []
 
-    def atualizar(self, dt, cabeca_x, cabeca_y):
-        """Move as partículas; as estrelas giram em volta de (cabeca_x, cabeca_y)."""
+    def atualizar(self, dt, cabeca_x, cabeca_y, centro_y):
+        """Move as partículas; estrelas giram na cabeça e moscas voam em volta do corpo."""
+        self.tempo += dt
         vivas = []
         for p in self.particulas:
             p.idade += dt
@@ -77,3 +97,11 @@ class Efeitos:
                     self.canvas.tag_raise(item, self.item_sprite)
                 else:
                     self.canvas.tag_lower(item, self.item_sprite)
+
+        # Mosquinhas: cada uma num zigue-zague diferente em volta do corpo
+        rx, ry = 11 * 4 * self.k, 6 * 4 * self.k
+        for i, item in enumerate(self.moscas):
+            t = self.tempo
+            x = cabeca_x + math.sin(t * (2.3 + i * 0.7) + i * 2.1) * rx + math.sin(t * 9 + i) * 2 * self.k
+            y = centro_y + math.cos(t * (1.7 + i * 0.5) + i) * ry + math.cos(t * 11 + i) * 2 * self.k
+            self.canvas.coords(item, x, y)

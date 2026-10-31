@@ -38,6 +38,15 @@ TONTO_SEGUNDOS = 4.0
 PERDA_TONTURA = 8            # felicidade perdida ao ficar tonto
 GANHO_CARINHO = 2            # felicidade ganha por clique
 
+# Tamagotchi (as taxas por hora ficam em necessidades.Taxas)
+SEGUNDOS_SOZINHO = 300       # sem mexer no PC por esse tempo = você saiu, ele fica sozinho
+SEGUNDOS_POR_XP = 60         # XP passivo: 1 por minuto com você por perto
+SEGUNDOS_POR_XP_OVO = 10     # o ovo choca mais rápido (~17 min até 100 XP)
+LIMPEZA_POR_PIXEL = 0.04     # sujeira tirada por pixel de mouse esfregado
+XP_ALIMENTAR = 5
+XP_BRINCAR = 5
+XP_REMEDIO = 2
+
 # Rotina
 TOPMOST_MS = 3000       # de quanto em quanto tempo reforça "sempre por cima"
 AREA_MS = 5000          # de quanto em quanto tempo relê a área de trabalho

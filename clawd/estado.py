@@ -15,10 +15,26 @@ PADRAO = {
     "xp": 0,
     "fase": "ovo",
     "acessorios": {"comprados": [], "equipados": {}},
+    "sujeira": 0,               # 0 = limpinho, 100 = cheio de mosquinha
+    "doente": False,            # gripado até tomar remédio
+    "horas_com_fome": 0.0,      # tempo seguido com fome baixa (leva à gripe)
+    "modo_tamagotchi": True,    # desligado: status pausados, sem avisos
+    "monitor": None,            # nome do monitor onde ele mora (ex.: \\.\DISPLAY2)
     "lugar_favorito": None,     # onde foi solto por último {"x", "y"}
     "ultima_posicao": None,     # onde estava quando salvou {"x", "y"}
     "ultimo_save": None,        # ISO 8601 com fuso
 }
+
+
+def _arredondar(valor):
+    """Copia arredondando números quebrados pra o save ficar legível."""
+    if isinstance(valor, dict):
+        return {k: _arredondar(v) for k, v in valor.items()}
+    if isinstance(valor, list):
+        return [_arredondar(v) for v in valor]
+    if isinstance(valor, float):
+        return round(valor, 3)
+    return valor
 
 
 def _mesclar(base, novo):
@@ -66,7 +82,7 @@ class Estado:
         """Grava num .tmp e troca de uma vez, pra nunca deixar o save pela metade."""
         self.dados["ultimo_save"] = datetime.now().astimezone().isoformat(timespec="seconds")
         temporario = self.caminho.with_name(self.caminho.name + ".tmp")
-        texto = json.dumps(self.dados, indent=2, ensure_ascii=False)
+        texto = json.dumps(_arredondar(self.dados), indent=2, ensure_ascii=False)
         for tentativa in range(3):
             try:
                 temporario.write_text(texto, encoding="utf-8")

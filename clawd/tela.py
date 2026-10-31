@@ -1,6 +1,7 @@
-"""Acesso à API do Windows: DPI, área de trabalho, estilo da janela e instância única."""
+"""Acesso à API do Windows: DPI, monitores, área de trabalho, estilo da janela e instância única."""
 
 import ctypes
+import re
 import sys
 from dataclasses import dataclass
 
@@ -20,11 +21,21 @@ if WINDOWS:
     _kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
     _kernel32.CreateMutexW.restype = wintypes.HANDLE
 
+    class _MONITORINFOEXW(ctypes.Structure):
+        _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT), ("rcWork", wintypes.RECT),
+                    ("dwFlags", wintypes.DWORD), ("szDevice", wintypes.WCHAR * 32)]
+
+    _MonitorEnumProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HMONITOR, wintypes.HDC,
+                                          ctypes.POINTER(wintypes.RECT), wintypes.LPARAM)
+    _user32.EnumDisplayMonitors.argtypes = [wintypes.HDC, ctypes.c_void_p, _MonitorEnumProc, wintypes.LPARAM]
+    _user32.GetMonitorInfoW.argtypes = [wintypes.HMONITOR, ctypes.POINTER(_MONITORINFOEXW)]
+
 SPI_GETWORKAREA = 0x30
 GWL_EXSTYLE = -20
 WS_EX_TOOLWINDOW = 0x80
 WS_EX_APPWINDOW = 0x40000
 ERROR_ALREADY_EXISTS = 183
+MONITORINFOF_PRIMARY = 1
 
 
 @dataclass(frozen=True)
@@ -34,6 +45,31 @@ class Area:
     topo: int
     direita: int
     base: int
+
+    def contem(self, x, y):
+        return self.esquerda <= x < self.direita and self.topo <= y < self.base
+
+    def distancia(self, x, y):
+        """Distância de um ponto até o retângulo (0 se estiver dentro)."""
+        dx = max(self.esquerda - x, 0, x - self.direita)
+        dy = max(self.topo - y, 0, y - self.base)
+        return (dx * dx + dy * dy) ** 0.5
+
+
+@dataclass(frozen=True)
+class Monitor:
+    nome: str          # nome do Windows, ex.: \\.\DISPLAY2 (é o que vai pro save)
+    numero: int        # o número de "Configurações > Tela"
+    tela: Area         # monitor inteiro
+    area: Area         # sem a barra de tarefas; o chão do Clawd é area.base
+    principal: bool
+
+    @property
+    def rotulo(self):
+        largura = self.tela.direita - self.tela.esquerda
+        altura = self.tela.base - self.tela.topo
+        extra = " (principal)" if self.principal else ""
+        return f"Monitor {self.numero} · {largura}×{altura}{extra}"
 
 
 def ativar_dpi():
@@ -60,6 +96,46 @@ def area_de_trabalho(root=None):
     return Area(0, 0, 1920, 1080)
 
 
+def monitores(root=None):
+    """Monitores ligados, com o principal primeiro e o resto da esquerda pra direita."""
+    lista = []
+    if WINDOWS:
+        def cada(hmonitor, _hdc, _rect, _dados):
+            info = _MONITORINFOEXW()
+            info.cbSize = ctypes.sizeof(_MONITORINFOEXW)
+            if _user32.GetMonitorInfoW(hmonitor, ctypes.byref(info)):
+                m, w = info.rcMonitor, info.rcWork
+                achado = re.search(r"(\d+)$", info.szDevice)
+                lista.append(Monitor(
+                    nome=info.szDevice,
+                    numero=int(achado.group(1)) if achado else len(lista) + 1,
+                    tela=Area(m.left, m.top, m.right, m.bottom),
+                    area=Area(w.left, w.top, w.right, w.bottom),
+                    principal=bool(info.dwFlags & MONITORINFOF_PRIMARY)))
+            return True
+        _user32.EnumDisplayMonitors(None, None, _MonitorEnumProc(cada), 0)
+    if not lista:
+        area = area_de_trabalho(root)
+        lista.append(Monitor("principal", 1, area, area, True))
+    return sorted(lista, key=lambda m: (not m.principal, m.tela.esquerda, m.tela.topo))
+
+
+def monitor_por_nome(lista, nome):
+    """O monitor salvo, ou o principal se ele não estiver mais ligado."""
+    for m in lista:
+        if m.nome == nome:
+            return m
+    return lista[0]
+
+
+def monitor_no_ponto(lista, x, y):
+    """Monitor que contém o ponto; se cair entre monitores, o mais próximo."""
+    for m in lista:
+        if m.tela.contem(x, y):
+            return m
+    return min(lista, key=lambda m: m.tela.distancia(x, y))
+
+
 def estilo_ferramenta(janela):
     """Tira a janela do Alt+Tab e da barra de tarefas."""
     if not WINDOWS:
@@ -67,6 +143,21 @@ def estilo_ferramenta(janela):
     hwnd = _user32.GetParent(janela.winfo_id()) or janela.winfo_id()
     estilo = _user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
     _user32.SetWindowLongW(hwnd, GWL_EXSTYLE, (estilo | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW)
+
+
+class _LASTINPUTINFO(ctypes.Structure):
+    _fields_ = [("cbSize", ctypes.c_uint), ("dwTime", ctypes.c_uint)]
+
+
+def segundos_ocioso():
+    """Há quanto tempo ninguém mexe no mouse ou no teclado."""
+    if not WINDOWS:
+        return 0.0
+    info = _LASTINPUTINFO(ctypes.sizeof(_LASTINPUTINFO), 0)
+    if not _user32.GetLastInputInfo(ctypes.byref(info)):
+        return 0.0
+    agora = _kernel32.GetTickCount() & 0xFFFFFFFF
+    return ((agora - info.dwTime) & 0xFFFFFFFF) / 1000
 
 
 def instancia_unica(nome):
