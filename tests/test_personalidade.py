@@ -162,10 +162,10 @@ class TestNaTela(BaseMascote):
         d["current"].update(temperature_2m=27)
         m.clima.atual = clima.ler_previsao(d)
         with mock.patch.object(m.clima, "agora_na_cidade", return_value=datetime(2026, 10, 31, 11, 30)):
-            m.clima._vestir_e_chover()
+            m.clima._vestir()
             self.assertIsNotNone(m.efeitos.ventilador)      # 27 °C já é calor pro pinguim
             m.trocar_pet("clawd")
-            m.clima._vestir_e_chover()
+            m.clima._vestir()
             self.assertIsNone(m.efeitos.ventilador)         # pro Clawd ainda não
 
     def test_menu_lista_os_sete(self):

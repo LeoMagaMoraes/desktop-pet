@@ -1,5 +1,5 @@
-"""Liga o clima ao Clawd: busca numa thread a cada 30 min, troca as roupas,
-desenha a chuva na tela, avisa da previsão de manhã e se esconde na trovoada.
+"""Liga o clima ao pet: busca numa thread a cada 30 min, troca as roupas (guarda-chuva
+na chuva, óculos no sol...), avisa da previsão de manhã e se esconde na trovoada.
 Sem internet, continua com o último clima que conseguiu."""
 
 import logging
@@ -37,6 +37,7 @@ class ControleClima:
     def __init__(self, mascote):
         self.m = mascote
         self.d = mascote.estado.dados["clima"]
+        self.d.pop("chuva_na_tela", None)       # opção das gotas na tela, que saiu
         self.atual = None
         if self.d.get("atual"):
             try:
@@ -132,7 +133,7 @@ class ControleClima:
             self._thread = threading.Thread(target=self._buscar, daemon=True)
             self._thread.start()
 
-        self._vestir_e_chover()
+        self._vestir()
         self._previsao_da_manha()
         self._comportamento(agora)
 
@@ -165,14 +166,12 @@ class ControleClima:
         if texto and not self.m.balao.visivel:
             self.m.falar(texto, 2.5)
 
-    def _vestir_e_chover(self):
+    def _vestir(self):
         m = self.m
         m.vestir(self.roupas())
         c = self.vigente()
         calor = especies.especie(m.especie).calor          # o pinguim sente calor antes
         m.efeitos.ventilador_ligado(bool(c and c.temperatura > calor and m.fase != "ovo"))
-        chuva = c.categoria if (c and c.chovendo and self.d.get("chuva_na_tela", True)) else None
-        m.chuva.ajustar(chuva, m.area)
 
     def _previsao_da_manha(self):
         """Uma vez por dia, de manhã: se vai chover mais tarde, ele avisa."""

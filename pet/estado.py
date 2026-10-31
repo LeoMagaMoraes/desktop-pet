@@ -40,7 +40,6 @@ PADRAO = {
         "utc_offset": -10800,
         "atual": None,               # último clima que conseguiu (usado sem internet)
         "atualizado": None,
-        "chuva_na_tela": True,
         "previsao_avisada": None,    # dia em que já avisou da chuva de manhã
     },
     "monitor": None,            # nome do monitor onde ele mora (ex.: \\.\DISPLAY2)

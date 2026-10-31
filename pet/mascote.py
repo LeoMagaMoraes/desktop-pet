@@ -12,7 +12,6 @@ from tkinter import simpledialog
 
 from . import config, especies, fisica, interacao, necessidades, sons, tela, tokens
 from .balao import Balao
-from .chuva import ChuvaNaTela
 from .claude_code import ClaudeCode
 from .clima_controle import ControleClima
 from .efeitos import Efeitos
@@ -102,7 +101,6 @@ class Mascote:
         # Necessidades, avisos e XP (precisa do save ainda sem o horário novo)
         self.tama = Tamagotchi(self)
         self.cc = ClaudeCode(self)      # eventos dos hooks e tokens
-        self.chuva = ChuvaNaTela(self.root, config.COR_CHAVE, self.escala)
         self.clima = ControleClima(self)
         self.vestir(self.clima.roupas())   # já abre com a roupa do último clima conhecido
         self.painel = Painel(self)
@@ -266,7 +264,6 @@ class Mascote:
         self.salvar()
         self.painel.fechar()
         self.menu.fechar()
-        self.chuva.desligar()
         # Cancela os loops agendados pra não sobrar callback apontando pra janela fechada.
         # Cada um no seu try: se um falhar, o destroy ainda tem que acontecer.
         try:
@@ -294,10 +291,8 @@ class Mascote:
         self.root.after(config.AUTOSAVE_MS, self._autosave)
 
     def _manter_por_cima(self):
-        # A barra de tarefas às vezes passa na frente; reforça o topmost.
-        # A ordem importa: a chuva fica embaixo do Clawd e do balão.
-        janelas = ([self.chuva.janela] if self.chuva.ativa else []) + [self.root, self.balao.janela]
-        for janela in janelas:
+        # A barra de tarefas às vezes passa na frente; reforça o topmost
+        for janela in (self.root, self.balao.janela):
             janela.attributes("-topmost", True)
             janela.lift()
         self.root.after(config.TOPMOST_MS, self._manter_por_cima)
@@ -667,7 +662,6 @@ class Mascote:
         self.tama.tick()
         self.cc.tick()
         self.clima.tick()
-        self.chuva.atualizar(dt)
         self.efeitos.atualizar(dt, self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala,
                                self.alt_janela - self.sprites.altura_corpo / 2)
 

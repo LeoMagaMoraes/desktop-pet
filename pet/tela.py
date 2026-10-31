@@ -203,16 +203,6 @@ def cantos_arredondados(janela):
         pass
 
 
-def atravessar_cliques(janela):
-    """Deixa o mouse passar direto pela janela (pra chuva não atrapalhar ninguém)."""
-    if not WINDOWS:
-        return
-    hwnd = _user32.GetParent(janela.winfo_id()) or janela.winfo_id()
-    estilo = _user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-    # WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
-    _user32.SetWindowLongW(hwnd, GWL_EXSTYLE, estilo | 0x20 | 0x80000 | WS_EX_TOOLWINDOW | 0x08000000)
-
-
 def botao_do_mouse_apertado():
     """True se o botão esquerdo, direito ou do meio está apertado agora (em qualquer janela)."""
     if not WINDOWS:

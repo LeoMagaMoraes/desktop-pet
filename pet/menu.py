@@ -237,8 +237,6 @@ class MenuClawd:
                    direita=lambda pai: self._etiqueta(pai, cl.rotulo(), TEXTO))
         self._item("alvo", "Trocar cidade", m._perguntar_cidade,
                    direita=lambda pai: self._etiqueta(pai, cidade))
-        self._chave("nuvem", "Gotas de chuva na tela", d.get("chuva_na_tela", True),
-                    lambda: d.__setitem__("chuva_na_tela", not d.get("chuva_na_tela", True)))
         self._item("plugue", "Atualizar agora", cl.atualizar_agora)
         quando = (d.get("atualizado") or "")[11:16]
         nota = f"{cidade}{', ' + estado if estado else ''}"

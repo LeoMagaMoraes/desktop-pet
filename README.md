@@ -31,8 +31,8 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 - 🍖 **É um tamagotchi:** tem fome, energia, felicidade e sujeira, sente o tempo com o PC desligado, pega gripe e evolui de ovo até Clawd ancião.
 - 🤖 **Conversa com o Claude Code:** reage aos seus prompts, ao fim de cada task, a testes passando ou falhando e a comandos com erro.
 - 📊 **Conta tokens:** da sessão, da task e dos últimos 7 dias, com meta semanal.
-- 🌦️ **Sente o tempo lá fora:** se veste conforme o clima de verdade, faz chover na sua tela, se esconde na
-  trovoada e avisa de manhã se vai chover.
+- 🌦️ **Sente o tempo lá fora:** se veste conforme o clima de verdade da sua cidade, se esconde na trovoada e
+  avisa de manhã se vai chover.
 - 🐉 **Sete pets:** Clawd, dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix e corujinha,
   cada um com o próprio progresso e o próprio jeito.
 - 🖥️ **Se vira em vários monitores** e lembra onde você o deixou.
@@ -166,7 +166,7 @@ Menu → **Trocar de pet**. Além do Clawd 🦀, tem mais seis, cada um com o se
 
 <p align="center"><img src="docs/roupas.png" alt="Óculos escuros no sol, normal no nublado, guarda-chuva e galochas na chuva, gorro e cachecol na neve, cachecol no frio, pijama de noite e escondido na trovoada"></p>
 
-Ele olha o céu de **Florianópolis, SC** pelo [Open-Meteo](https://open-meteo.com/) (grátis, sem chave),
+Ele olha o céu da **cidade que você escolher** pelo [Open-Meteo](https://open-meteo.com/) (grátis, sem chave),
 a cada 30 minutos, numa thread separada. Sem internet, continua com o último clima que conseguiu.
 
 | Lá fora | O Clawd |
@@ -175,7 +175,7 @@ a cada 30 minutos, numa thread separada. Sem internet, continua com o último cl
 | 🥵 Acima de 30 °C | Um ventiladorzinho girando do lado dele |
 | ☁ Nublado | Normal |
 | 🌫 Neblina | Anda devagarinho |
-| 🌧 Chuva ou garoa | Guarda-chuva, galochas e gotas caindo na tela; fica preguiçoso e cochila mais |
+| 🌧 Chuva ou garoa | Guarda-chuva e galochas; fica preguiçoso e cochila mais |
 | ❄ Neve | Gorro e cachecol |
 | ⛈ Trovoada | Se esconde atrás da barra de tarefas, tremendo: **"Tá trovejando! 😱"** |
 | 🥶 Abaixo de 15 °C | Cachecol em qualquer tempo, e a fome cai mais rápido |
@@ -184,10 +184,8 @@ a cada 30 minutos, numa thread separada. Sem internet, continua com o último cl
 - **Previsão:** de manhã (entre 6h e 12h), uma vez por dia, ele avisa se vai chover mais tarde, olhando a
   chance de chuva hora a hora: *"☔ Previsão: deve chover lá pelas 14h (59%)"*.
 - **Ver o tempo:** clique nele, ou menu → **Clima**, pra ver temperatura, sensação, vento e chance de chuva.
-- **Trocar a cidade:** menu → **Clima e cidade** → Trocar cidade (ex.: `Recife, PE`). Lá também dá pra
-  desligar as gotas na tela e forçar uma atualização.
-- As gotas ficam numa janela transparente que **os cliques atravessam**, então não atrapalham nada (e
-  gastam uns 3% de um núcleo da CPU).
+- **Escolher a cidade:** menu → **Clima e cidade** → Trocar cidade (ex.: `Recife, PE` ou `Curitiba`). Lá também
+  dá pra forçar uma atualização.
 
 ## 🤖 Integração com o Claude Code
 
@@ -302,8 +300,7 @@ pet/
   tamagotchi.py       avisos, sono, espirros, banho e XP
   necessidades.py     regras do tamagotchi: taxas, gripe, tempo offline, fases (sem Tk)
   clima.py            Open-Meteo, códigos de tempo, roupas e previsão (regras sem Tk)
-  clima_controle.py   busca o clima numa thread, veste, faz chover e avisa da previsão
-  chuva.py            gotas de chuva numa janela que os cliques atravessam
+  clima_controle.py   busca o clima numa thread, veste o pet e avisa da previsão
   claude_code.py      lê os eventos dos hooks, reações, meta e tokens da semana
   eventos_claude.py   traduz o JSON do hook em eventos do Clawd (sem Tk)
   tokens.py           soma de tokens dos transcripts (sem Tk)
@@ -330,7 +327,7 @@ O save fica em `pet.json` e os erros em `pet.log`, ambos na pasta do projeto (fo
 - [x] **Fase 1:** janela transparente, andar, clique, menu, arrastar, arremessar e tontura
 - [x] **Fase 2:** necessidades, tempo offline, avisos, gripe, banho e evolução
 - [x] **Fase 3:** hooks do Claude Code, contador de tokens e meta semanal
-- [x] **Fase 4:** clima de verdade (Open-Meteo), roupinhas pelo tempo, chuva na tela e previsão
+- [x] **Fase 4:** clima de verdade (Open-Meteo), roupinhas pelo tempo e previsão
 - [x] **Extra:** troca de pet: dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix e corujinha
 - [ ] **Fase 5:** loja de acessórios, fiscal do git, hora de dormir, datas especiais, música e conversa com o Claude
 

@@ -164,25 +164,18 @@ class TestClawdNoClima(BaseMascote):
     def test_sol_veste_oculos(self):
         self.preparar(com_tempo(0))
         with mock.patch.object(self.m.clima, "agora_na_cidade", return_value=datetime(2026, 10, 31, 11, 30)):
-            self.m.clima._vestir_e_chover()
+            self.m.clima._vestir()
         self.assertIn("oculos_sol", self.m.roupas)
 
-    def test_chuva_na_tela_e_guarda_chuva(self):
+    def test_chuva_veste_guarda_chuva_sem_gotas_na_tela(self):
         m = self.m
+        janelas_antes = len(m.root.winfo_children())
         with mock.patch.object(m.clima, "agora_na_cidade", return_value=datetime(2026, 10, 31, 11, 30)):
             self.preparar(com_tempo(63))
-            self.assertIn("guarda_chuva", m.roupas)
-            self.assertTrue(m.chuva.ativa)
-            m.chuva.atualizar(0.05)
-            # Os cliques precisam atravessar a janela da chuva (WS_EX_TRANSPARENT)
-            from pet import tela
-            if tela.WINDOWS:
-                janela = m.chuva.janela
-                hwnd = tela._user32.GetParent(janela.winfo_id()) or janela.winfo_id()
-                self.assertTrue(tela._user32.GetWindowLongW(hwnd, tela.GWL_EXSTYLE) & 0x20)
-            m.clima.d["chuva_na_tela"] = False
-            m.clima._vestir_e_chover()
-            self.assertFalse(m.chuva.ativa)
+        self.assertTrue({"guarda_chuva", "galochas"} <= m.roupas)
+        self.assertFalse(hasattr(m, "chuva"))                        # o efeito de gotas saiu
+        self.assertEqual(len(m.root.winfo_children()), janelas_antes)  # nenhuma janela nova
+        self.assertNotIn("chuva_na_tela", m.clima.d)
 
     def test_trovoada_esconde_e_treme(self):
         m = self.m
@@ -249,7 +242,8 @@ class TestClawdNoClima(BaseMascote):
         self.assertTrue(any(t.startswith("23°") for t in textos))
         self.clicar_no_menu("Clima e cidade")
         textos = self.textos_do_menu()
-        self.assertIn("Gotas de chuva na tela", textos)
+        self.assertIn("Trocar cidade", textos)
+        self.assertNotIn("Gotas de chuva na tela", textos)
         self.assertTrue(any("Open-Meteo" in t for t in textos))
 
     def test_trocar_cidade(self):
