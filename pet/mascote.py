@@ -374,11 +374,18 @@ class Mascote:
         if self.tama.ativo and self.estado.status["fome"] >= 95:
             self.falar("Tô cheio! 😋", 2)
             return
+        esp = especies.especie(self.especie)
         self.mudar("comendo", 3)
         self._ajustar("fome", 25)
-        self._ajustar("felicidade", 3)
+        self._ajustar("felicidade", 8 if esp.comilao else 3)     # comilão fica bem mais feliz
         self.tama.ganhar_xp(config.XP_ALIMENTAR)
-        self.falar("Nham nham! 🍤")
+        self.falar(esp.frases.get("comida", "Nham nham! 🍤"))
+        self.som_do_pet(esp.som_comida)
+
+    def som_do_pet(self, nome):
+        """Toca o som do bicho (quack, wheek...) se os sons estiverem ligados."""
+        if nome and self.estado.dados["claude"]["sons"]:
+            sons.tocar(nome)
 
     def brincar(self):
         if self.fase == "ovo":
@@ -421,7 +428,7 @@ class Mascote:
     def espirrar(self):
         tipo = especies.especie(self.especie).espirro     # dragão espirra faísca, tubarão bolhas
         self.mudar("espirrando", 1.2)
-        self.falar("Atchim! " + {"fogo": "🔥", "bolha": "💦", "floco": "❄", "pena": "🪶"}.get(tipo, "🤧"), 1.2)
+        self.falar("Atchim! " + {"fogo": "🔥", "bolha": "💦", "floco": "❄", "pena": "🪶", "feno": "🌾"}.get(tipo, "🤧"), 1.2)
         self.root.after(300, lambda: self.efeitos.gotas(
             self.larg_janela / 2 + 4 * self.escala * self.direcao,
             self.alt_janela - self.sprites.altura_corpo / 2, self.direcao, tipo))
@@ -445,7 +452,7 @@ class Mascote:
         esp = especies.especie(novo)
         self.mudar("acenando", 2.5)
         if self.fase == "ovo":
-            self.falar(f"Um {esp.nomes_fase['ovo'].lower()}! 🥚\nFaz carinho pra ele chocar", 4)
+            self.falar(esp.frases.get("ovo", f"Um {esp.nomes_fase['ovo'].lower()}! 🥚\nFaz carinho pra ele chocar"), 4)
         else:
             self.falar(f"Oi de novo! Sou {esp.apresentacao} {esp.emoji}", 3)
         self.salvar()
@@ -507,7 +514,7 @@ class Mascote:
             self._renascendo = False
             self.falar(f"Renasci das cinzas! {esp.emoji}✨", 4)
         elif antiga == "ovo":
-            self.falar(f"Nasci! 🐣\nOi, eu sou {esp.apresentacao}! {esp.emoji}", 4)
+            self.falar(esp.frases.get("nasci", f"Nasci! 🐣\nOi, eu sou {esp.apresentacao}! {esp.emoji}"), 4)
         else:
             self.falar(f"Evoluí! Agora sou\n{esp.nomes_fase[nova]}! ✨", 4)
         self.salvar()
@@ -605,6 +612,13 @@ class Mascote:
             self._ultimo_som_clique = agora
             sons.tocar(esp.som_clique)               # quack!
         texto = self.clima.texto_clique()        # clicar nele mostra a temperatura
+        feliz = self.estado.status["felicidade"] >= 70 or not self.tama.ativo
+        if esp.popcorn and feliz and self.acao in ("parado", "andando"):
+            # Popcorning: porquinho-da-índia feliz dá pulinhos no ar
+            self.mudar("comemorando", 1.2)
+            if random.random() < 0.5:
+                self.falar(esp.frases.get("popcorn", "Pop! Pop!"), 1.5)
+                return
         if "clique" in esp.frases and random.random() < 0.35:
             self.falar(esp.frases["clique"], 1.5)
         elif texto:

@@ -216,7 +216,8 @@ class ClaudeCode:
             if self._livre():
                 m.mudar("comendo", 2.5)
             m._ajustar("fome", config.FOME_PROMPT)
-            m.falar("🍤 Prompt novo! Nham!", 2)
+            m.falar(self._frase("prompt", "🍤 Prompt novo! Nham!"), 2)
+            m.som_do_pet(especies.especie(m.especie).som_comida)
         m.tama.ganhar_xp(config.XP_PROMPT)
 
     def _reagir_fim(self, ev):

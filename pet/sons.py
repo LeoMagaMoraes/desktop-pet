@@ -15,6 +15,7 @@ MELODIAS = {
     "ok": [(1047, 80), (1319, 140)],
     "triste": [(523, 160), (440, 160), (330, 320)],
     "quack": [(1450, 45), (1150, 70)],              # patinho de borracha apertado
+    "wheek": [(1300, 55), (1650, 55), (2000, 110)],  # porquinho-da-índia pedindo comida
 }
 
 

@@ -168,7 +168,60 @@ class TestNaTela(BaseMascote):
             m.clima._vestir()
             self.assertIsNone(m.efeitos.ventilador)         # pro Clawd ainda não
 
-    def test_menu_lista_os_sete(self):
+    def test_porquinho_chega_num_ninho_de_feno(self):
+        m = self.m
+        m.trocar_pet("porquinho")
+        self.assertEqual(m.fase, "ovo")
+        self.assertIn("ninho de feno", m.balao.texto)
+        m.mudar("parado", 10)
+        m.tama.ganhar_xp(100)
+        self.rodar_ticks(3.3)
+        self.assertIn("Saí do ninho", m.balao.texto)
+
+    def test_porquinho_wheek_na_comida_e_comilao(self):
+        from unittest import mock
+        m = self.trocar("porquinho")
+        m.estado.dados["claude"]["sons"] = True
+        m.estado.status.update(fome=40, felicidade=50)
+        with mock.patch("pet.mascote.sons.tocar") as tocar:
+            m.alimentar()
+        tocar.assert_called_once_with("wheek")
+        self.assertIn("Wheek wheek", m.balao.texto)
+        self.assertEqual(m.estado.status["felicidade"], 58)     # comilão: comer alegra mais
+        efeitos = especies.ajustar_efeitos("porquinho", clima.efeitos_nos_status(None), None)
+        self.assertGreater(efeitos["mult_fome"], 1)             # e a fome cai mais rápido
+
+    def test_porquinho_wheek_no_prompt(self):
+        from unittest import mock
+        m = self.trocar("porquinho")
+        m.estado.dados["claude"]["sons"] = True
+        with mock.patch("pet.mascote.sons.tocar") as tocar:
+            self.hook(evento="prompt")
+        tocar.assert_called_with("wheek")
+        self.assertIn("Wheek wheek", m.balao.texto)
+
+    def test_porquinho_faz_popcorning_quando_feliz(self):
+        from unittest import mock
+        m = self.trocar("porquinho")
+        m.estado.status["felicidade"] = 90
+        with mock.patch("pet.mascote.random.random", return_value=0):
+            self.clicar()
+        self.assertEqual(m.acao, "comemorando")
+        self.assertIn("Pop! Pop!", m.balao.texto)
+        # Triste, não pula
+        m.mudar("parado", 10)
+        m.estado.status["felicidade"] = 20
+        self.clicar()
+        self.assertEqual(m.acao, "parado")
+
+    def test_porquinho_espirra_feno(self):
+        m = self.trocar("porquinho")
+        m.espirrar()
+        self.assertIn("🌾", m.balao.texto)
+        self.esperar(lambda: any(m.canvas.itemcget(pt.item, "image") == str(m.imagens_efeito["feno"])
+                                 for pt in m.efeitos.particulas))
+
+    def test_menu_lista_todos(self):
         self.abrir_menu()
         self.clicar_no_menu("Trocar de pet")
         textos = self.textos_do_menu()

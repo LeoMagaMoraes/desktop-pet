@@ -640,6 +640,50 @@ def _coruja_frente(g, f, t, base, dx, pose):
 _CORES_OVO_CORUJA = {"C": "#F4F1EA", "S": "#D8D0C0", "L": "#B39A7C"}
 
 
+# --- porquinho-da-índia --------------------------------------------------------
+
+PORQUINHO = "#D9A066"
+PORQUINHO_SOMBRA = "#B07D45"
+PELO_BRANCO = "#F5EDE0"
+PELO_ESCURO = "#6B4A2E"
+NARIZ_ROSA = "#E89AA6"
+PE_ROSA = "#E8B0A0"
+FENO = "#E8D28A"
+
+PELE_PORQUINHO = Pele(PORQUINHO, PORQUINHO_SOMBRA, pernas=PE_ROSA)
+# Mais largo e mais baixinho que os outros, com perninhas curtas
+PORQUINHO_ADULTO = Forma(x0=4, topo=6, altura=8, pernas_x=(6,), olho_x=7, olho_dy=2,
+                         braco_dy=4, boca_dy=5, dy_dormindo=1, pernas_largura=2)
+PORQUINHO_FILHOTE = Forma(x0=6, topo=9, altura=5, pernas_x=(7,), olho_x=8, olho_dy=1,
+                          braco_dy=2, boca_dy=3, dy_dormindo=1, pernas_largura=2)
+
+
+def _porquinho_frente(g, f, t, base, dx, pose):
+    """Pelo tricolor: mancha escura de um lado, faixa branca no rosto, focinho e barriga brancos,
+    nariz rosa e orelhinhas redondas."""
+    pequeno = f.altura < 8
+    centro = LARGURA // 2
+    x1 = _espelho(f.x0)
+    # Mancha marrom-escura no alto do lado esquerdo
+    g.retangulo(f.x0 + dx, t, f.x0 + (2 if pequeno else 3) + dx, t + (1 if pequeno else 2), PELO_ESCURO)
+    # Faixa branca descendo pela testa até o focinho
+    g.retangulo(centro - 1 + dx, t, centro + dx, t + f.olho_dy + 2, PELO_BRANCO)
+    g.retangulo(centro - 2 + dx, t + f.olho_dy + 2, centro + 1 + dx, t + f.olho_dy + 3, PELO_BRANCO)
+    # Barriguinha branca
+    g.retangulo(f.x0 + 3 + dx, base - (1 if pequeno else 2), x1 - 3 + dx, base - 1, PELO_BRANCO)
+    # Nariz rosa
+    g.retangulo(centro - 1 + dx, t + f.olho_dy + 2, centro + dx, t + f.olho_dy + 2, NARIZ_ROSA)
+    # Orelhinhas redondas (rosinha por dentro)
+    for lado in (-1, 1):
+        ox = f.x0 + 1 if lado < 0 else _espelho(f.x0 + 1)
+        g.ponto(ox + dx, t - 1, PORQUINHO_SOMBRA)
+        g.ponto(ox + (1 if lado < 0 else -1) + dx, t - 1, NARIZ_ROSA)
+
+
+# Porquinho-da-índia não sai de ovo: começa num ninho de feno
+_CORES_OVO_PORQUINHO = {"C": FENO, "S": "#C9AE5B", "L": "#A88A3D"}
+
+
 # Como desenhar cada bicho: proporções do filhote e do adulto, estilo e cores do ovo
 BICHOS = {
     "clawd": {"filhote": FILHOTE, "adulto": ADULTO, "estilo": {}, "ovo": _CORES_OVO},
@@ -658,6 +702,8 @@ BICHOS = {
               "ovo": _CORES_OVO_FENIX},
     "coruja": {"filhote": DRAGAO_FILHOTE, "adulto": DRAGAO_ADULTO,
                "estilo": {"pele": PELE_CORUJA, "frente": _coruja_frente}, "ovo": _CORES_OVO_CORUJA},
+    "porquinho": {"filhote": PORQUINHO_FILHOTE, "adulto": PORQUINHO_ADULTO,
+                  "estilo": {"pele": PELE_PORQUINHO, "frente": _porquinho_frente}, "ovo": _CORES_OVO_PORQUINHO},
 }
 
 
@@ -772,7 +818,7 @@ ANIMACOES = animacoes("clawd")
 # Efeitos que flutuam em volta dele
 _CORES_EFEITO = {"R": "#E8455A", "W": BRANCO, "Y": "#FFD34D", "Z": "#8FB4FF", "M": "#E8B26A",
                  "K": "#2A2A2A", "G": "#C9D6E3", "B": "#BFE6FF", "A": "#7CC4F2", "D": "#5A606A",
-                 "F": "#F28C28"}
+                 "F": "#F28C28", "H": "#E8D28A"}
 EFEITOS = {
     "coracao": de_texto([".RR.RR.",
                          "RWRRRRR",
@@ -805,6 +851,9 @@ EFEITOS = {
     "floco": de_texto(["W.W",
                        ".W.",
                        "W.W"], _CORES_EFEITO),
+    "feno": de_texto(["..H",
+                      ".H.",
+                      "H.."], _CORES_EFEITO),
     "pena": de_texto([".M",
                       "MW",
                       "M."], _CORES_EFEITO),
@@ -837,7 +886,8 @@ _CORES_ICONE = {"K": PRETO, "W": BRANCO, "O": LARANJA, "S": SOMBRA, "Y": "#FFD34
                 "G": "#7BC67B", "B": "#8FB4FF", "M": "#9C6B43", "C": "#D8DEE6", "D": "#5A606A",
                 "E": CASCA, "V": VERDE, "Q": VERDE_SOMBRA, "H": CHIFRE, "N": BARRIGA,
                 "T": AZUL_TUBARAO, "U": AZUL_TUBARAO_SOMBRA, "X": BARRIGA_TUBARAO,
-                "P": PINGUIM, "A": BICO_PATO, "F": FENIX, "L": CHAMA, "Z": CORUJA, "J": DISCO}
+                "P": PINGUIM, "A": BICO_PATO, "F": FENIX, "L": CHAMA, "Z": CORUJA, "J": DISCO,
+                "I": PORQUINHO, "#": PELO_ESCURO, "%": NARIZ_ROSA}
 ICONES = {
     "comida": de_texto(["....MMM.",
                         "...MMMMM",
@@ -947,6 +997,13 @@ ICONES = {
                         ".JJJAAJJJ.",
                         "..ZZZZZZ..",
                         "..YY..YY.."], _CORES_ICONE),
+    "porquinho": de_texto([".%I....I%.",
+                           ".##IWWIII.",
+                           ".##KWWKII.",
+                           "IIIIW%WIII",
+                           ".IIWWWWII.",
+                           "..IIIIII..",
+                           "..%%..%%.."], _CORES_ICONE),
     "ovo": de_texto(["..EEEE..",
                      ".EEEEEE.",
                      ".EEOEEE.",

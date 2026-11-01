@@ -15,7 +15,7 @@ class Especie:
     nome: str            # como ele se apresenta ("Oi, eu sou o ...")
     emoji: str
     nomes_fase: dict     # fase -> nome que aparece no menu e no painel
-    espirro: str         # efeito do espirro: "gota", "fogo", "bolha", "floco" ou "pena"
+    espirro: str         # efeito do espirro: "gota", "fogo", "bolha", "floco", "pena" ou "feno"
     icone: str           # ícone do menu (pixelart.ICONES)
     artigo: str = "o"    # "o Clawd", "a Fênix"
     # Personalidade (tudo opcional)
@@ -23,8 +23,12 @@ class Especie:
     noturno: bool = False           # coruja: dorme de dia, fica esperta de noite
     renasce: bool = False           # fênix: felicidade zerada vira cinzas e renasce do ovo
     calor: int = 30                 # acima disso aparece o ventiladorzinho
-    frases: dict = field(default_factory=dict)   # troca falas padrão: "erro", "teste_falhou", "clique"
+    frases: dict = field(default_factory=dict)   # troca falas padrão: "erro", "teste_falhou", "clique",
+                                                 # "comida", "prompt", "ovo", "nasci", "popcorn"
     som_clique: str = None          # som ao fazer carinho (sons.MELODIAS)
+    som_comida: str = None          # som quando ganha comida ou um prompt
+    popcorn: bool = False           # porquinho-da-índia: dá pulinhos de alegria no carinho quando tá feliz
+    comilao: bool = False           # fome cai mais rápido, mas comer alegra mais
 
     @property
     def apresentacao(self):
@@ -62,6 +66,14 @@ ESPECIES = {
                       {"ovo": "Ovo de coruja", "filhote": "Filhote de coruja", "clawd": "Coruja",
                        "anciao": "Coruja anciã"},
                       espirro="pena", icone="coruja", artigo="a", noturno=True),
+    "porquinho": Especie("porquinho", "Porquinho-da-índia", "🐹",
+                         {"ovo": "Ninho de feno", "filhote": "Filhote de porquinho", "clawd": "Porquinho-da-índia",
+                          "anciao": "Porquinho ancião"},
+                         espirro="feno", icone="porquinho", som_comida="wheek", popcorn=True, comilao=True,
+                         frases={"comida": "Wheek wheek! 🥕", "prompt": "🥕 Prompt novo! Wheek wheek!",
+                                 "ovo": "Um ninho de feno! 🌾\nFaz carinho pra ele sair",
+                                 "nasci": "Saí do ninho! 🌾\nOi, eu sou o Porquinho-da-índia! 🐹",
+                                 "popcorn": "Pop! Pop! 🍿"}),
 }
 PADRAO = "clawd"
 
@@ -134,6 +146,8 @@ def ajustar_efeitos(id_, efeitos, c):
     """Como o tempo mexe nas necessidades, do jeito de cada bicho."""
     esp = especie(id_)
     e = dict(efeitos)
+    if esp.comilao:
+        e["mult_fome"] *= 1.3                    # porquinho-da-índia vive com fome
     if c is None:
         return e
     if esp.gosta_de_frio:
