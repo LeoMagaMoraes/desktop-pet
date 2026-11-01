@@ -16,6 +16,9 @@ MELODIAS = {
     "triste": [(523, 160), (440, 160), (330, 320)],
     "quack": [(1450, 45), (1150, 70)],              # patinho de borracha apertado
     "wheek": [(1300, 55), (1650, 55), (2000, 110)],  # porquinho-da-índia pedindo comida
+    "lembrete": [(1568, 90), (0, 60), (1568, 90), (0, 60), (1568, 90), (0, 200),
+                 (1568, 90), (0, 60), (1568, 90), (0, 60), (1568, 90)],   # despertador: trim-trim-trim
+    "parabens": [(784, 150), (784, 80), (880, 260), (784, 260), (1047, 260), (988, 480)],   # parabéns pra você
 }
 
 

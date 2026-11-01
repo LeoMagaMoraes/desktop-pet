@@ -162,6 +162,7 @@ class ClaudeCode:
         self.d["dias_penalizados"] = 0
         if ev.get("tokens_sessao"):
             self.sessao = ev["tokens_sessao"]
+        self.m.fiscal.viu(ev.get("cwd"), terminou=tipo == "fim")     # projetos pro fiscal do git
 
         if self.esperando and tipo != "notificacao":
             self.parar_espera()          # o Claude voltou a trabalhar: você respondeu

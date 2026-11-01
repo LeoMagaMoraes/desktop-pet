@@ -292,6 +292,30 @@ def janelas_visiveis(tamanho_minimo=120):
     return achadas
 
 
+def tela_cheia_em(area):
+    """True se a janela ativa (de outro programa) cobre o monitor inteiro: jogo, filme, apresentação.
+
+    Usa o retângulo visível: janela só maximizada deixa a barra de tarefas (ou uma
+    beiradinha dela, se ela se esconde sozinha) de fora, então não conta.
+    """
+    if not WINDOWS:
+        return False
+    import os
+    hwnd = _user32.GetForegroundWindow()
+    if not hwnd:
+        return False
+    pid = wintypes.DWORD()
+    _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+    if pid.value == os.getpid():
+        return False
+    classe = ctypes.create_unicode_buffer(128)
+    _user32.GetClassNameW(hwnd, classe, 128)
+    if classe.value in CLASSES_IGNORADAS:
+        return False                        # área de trabalho e barra de tarefas também "cobrem" a tela
+    r = _retangulo_visivel(hwnd)
+    return r.left <= area.esquerda and r.top <= area.topo and r.right >= area.direita and r.bottom >= area.base
+
+
 def botao_do_mouse_apertado():
     """True se o botão esquerdo, direito ou do meio está apertado agora (em qualquer janela)."""
     if not WINDOWS:

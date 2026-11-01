@@ -14,13 +14,22 @@ from . import config, especies, fisica, interacao, necessidades, sons, tela, tok
 from .balao import Balao
 from .claude_code import ClaudeCode
 from .clima_controle import ControleClima
+from .datas import DatasEspeciais
+from .dialogo_lembrete import DialogoLembrete
 from .efeitos import Efeitos
 from .estado import Estado
+from .fiscal_git import FiscalGit
+from .hora_dormir import HoraDeDormir
 from .janelas import Explorador
+from .lembretes import Lembretes
+from .loja import Loja
 from .menu import MenuClawd
+from .musica import Musica
 from .painel import Painel
+from .resumo import ResumoDoDia
 from .sprites import BibliotecaSprites, criar_imagens_efeito
 from .tamagotchi import Tamagotchi
+from .tela_cheia import TelaCheia
 
 log = logging.getLogger(__name__)
 
@@ -93,6 +102,7 @@ class Mascote:
             config.SACUDIDA_REVERSOES, config.SACUDIDA_JANELA, config.SACUDIDA_AMPLITUDE * self.k)
         self.tonto_pendente = False
         self.arremessado = False
+        self.pulando = False          # pulou de propósito (pra uma janela): finca o pé ao pousar
 
         self._prox_particula = 0.0
         self._ultimo_ai = 0.0
@@ -105,8 +115,17 @@ class Mascote:
         self.cc = ClaudeCode(self)      # eventos dos hooks e tokens
         self.clima = ControleClima(self)
         self.janelas = Explorador(self)    # andar em cima das janelas abertas
-        self.vestir(self.clima.roupas())   # já abre com a roupa do último clima conhecido
+        self.lembretes = Lembretes(self)   # "me lembra de X às Y"
+        self.datas = DatasEspeciais(self)  # Natal, aniversário...
+        self.hora_dormir = HoraDeDormir(self)
+        self.tela_cheia = TelaCheia(self)  # some em jogo/filme em tela cheia
+        self.fiscal = FiscalGit(self)      # "commit?"
+        self.resumo = ResumoDoDia(self)
+        self.musica = Musica(self)         # fone e dancinha com som tocando
+        self.loja = Loja(self)
+        self.atualizar_roupas()            # já abre com a roupa do último clima conhecido
         self.painel = Painel(self)
+        self.dialogo_lembrete = DialogoLembrete(self)
 
     # ------------------------------------------------------------------ montagem
 
@@ -162,6 +181,32 @@ class Mascote:
         elif texto:
             self.salvar()
 
+    def _perguntar_hora_dormir(self):
+        texto = simpledialog.askstring(
+            "Hora de dormir", "A partir de que horas ele te manda ir dormir?\n"
+            "Exemplos: 23:00  ·  23h30  ·  meia-noite. Vazio = desligado.",
+            initialvalue=self.hora_dormir.hora or "", parent=self.root)
+        if texto is None:
+            return
+        if not self.hora_dormir.definir(texto):
+            self.falar("Não entendi esse horário 🤔\nTenta algo como 23:00", 3)
+            return
+        self.falar(f"Combinado! Às {self.hora_dormir.hora}\neu te mando dormir 🌙" if self.hora_dormir.hora
+                   else "Sem hora de dormir 🦉", 3)
+        self.salvar()
+
+    def _perguntar_aniversario(self):
+        texto = simpledialog.askstring(
+            "Seu aniversário", "Que dia é o seu aniversário? (dia/mês)\nExemplo: 25/03. Vazio = não comemorar.",
+            initialvalue=self.estado.dados["rotina"].get("aniversario") or "", parent=self.root)
+        if texto is None:
+            return
+        if not self.datas.definir_aniversario(texto):
+            self.falar("Não entendi essa data 🤔\nTenta algo como 25/03", 3)
+            return
+        self.falar("Anotado! 🎂" if texto.strip() else "Tá bom, sem festa 🥲", 2)
+        self.salvar()
+
     def _reinstalar_hooks(self):
         # Roda o instalador numa thread e conta o resultado no balão
         script = config.PASTA_BASE / "instalar_hooks.py"
@@ -180,8 +225,14 @@ class Mascote:
                                                          fase, self.roupas, self.especie)
         return self._bibliotecas[chave]
 
+    def atualizar_roupas(self):
+        """Veste tudo junto: clima, data especial, loja e o fone da música (pixelart.vestir resolve conflitos)."""
+        if not hasattr(self, "loja"):
+            return          # ainda montando (o clima pode chamar antes de tudo existir)
+        self.vestir(set(self.clima.roupas()) | self.datas.roupas() | self.loja.vestidos() | self.musica.roupas())
+
     def vestir(self, roupas):
-        """Troca as roupas do clima (redesenha os quadros só quando muda)."""
+        """Troca as roupas (redesenha os quadros só quando muda)."""
         roupas = frozenset(roupas)
         if roupas == self.roupas:
             return
@@ -268,6 +319,8 @@ class Mascote:
         self.salvar()
         self.painel.fechar()
         self.menu.fechar()
+        self.dialogo_lembrete.fechar()
+        self.musica.parar()
         # Cancela os loops agendados pra não sobrar callback apontando pra janela fechada.
         # Cada um no seu try: se um falhar, o destroy ainda tem que acontecer.
         try:
@@ -296,7 +349,8 @@ class Mascote:
 
     def _manter_por_cima(self):
         # A barra de tarefas às vezes passa na frente; reforça o topmost
-        for janela in (self.root, self.balao.janela):
+        janelas = () if self.tela_cheia.escondido else (self.root, self.balao.janela)
+        for janela in janelas:
             janela.attributes("-topmost", True)
             janela.lift()
         self.root.after(config.TOPMOST_MS, self._manter_por_cima)
@@ -330,6 +384,8 @@ class Mascote:
         self.anim_inicio = time.perf_counter()
 
     def falar(self, texto, segundos=None, fixo=False):
+        if self.tela_cheia.escondido:
+            return          # escondido da tela cheia: fica quietinho
         self.balao.falar(texto, segundos, fixo)
 
     def _decidir_proxima(self):
@@ -343,6 +399,9 @@ class Mascote:
         chance_cochilo = 0.25 if especies.especie(self.especie).dorminhoco else 0.1
         if self.tama.ativo and self.clima.efeitos()["dorminhoco"] and random.random() < chance_cochilo:
             self.tama.cochilar(random.uniform(60, 150))           # chuva (ou ser coala) dá preguiça
+            return
+        if self.musica.quer_dancar():                             # com música, dança
+            self.mudar("dancando", random.uniform(4, 8))
             return
         if self.janelas.tentar_pular():                           # sobe numa janela
             return
@@ -386,6 +445,7 @@ class Mascote:
         self._ajustar("fome", 25)
         self._ajustar("felicidade", 8 if esp.comilao else 3)     # comilão fica bem mais feliz
         self.tama.ganhar_xp(config.XP_ALIMENTAR)
+        self.resumo.contar("comidas")
         self.falar(esp.frases.get("comida", "Nham nham! 🍤"))
         self.som_do_pet(esp.som_comida)
 
@@ -408,6 +468,7 @@ class Mascote:
         self._ajustar("energia", -5)
         self._ajustar("fome", -3)
         self.tama.ganhar_xp(config.XP_BRINCAR)
+        self.resumo.contar("brincadeiras")
         self.falar("Iupi!")
 
     def dormir(self, texto="Boa noite... 💤"):
@@ -453,6 +514,7 @@ class Mascote:
         self.tonto_pendente = False
         self.efeitos.estrelas_girando(False)
         self.tama.ao_trocar_pet()
+        self.atualizar_roupas()                       # roupa do clima do jeito do bicho novo
         self.sprites = self._biblioteca(self.fase)
         self._ajustar_janela()
         self._img_atual = None
@@ -569,6 +631,7 @@ class Mascote:
 
     def _comecar_arrasto(self):
         self.arrastando = True
+        self.pulando = False
         if self.acao == "dormindo":
             self.falar("Ei! Eu tava dormindo!", 1.5)
         self.corpo.y -= self.salto
@@ -616,11 +679,14 @@ class Mascote:
     def _clique(self):
         """Carinho: coraçãozinho e um pouco de felicidade."""
         self.cc.parar_espera()          # clicar nele também conta como "voltei"
+        if self.lembretes.dispensar():  # tava acenando com um lembrete: o clique é o "ok, vi"
+            return
         if self.acao == "dormindo":
             self.acordar("Hm? Acordei!")
             return
         self.efeitos.coracao(self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala)
         self.tama.carinho()
+        self.resumo.contar("carinhos")
         esp = especies.especie(self.especie)
         agora = time.perf_counter()
         if esp.som_clique and self.estado.dados["claude"]["sons"] and agora - self._ultimo_som_clique > 0.6:
@@ -692,6 +758,13 @@ class Mascote:
         self.janelas.tick()
         self.cc.tick()
         self.clima.tick()
+        self.lembretes.tick()
+        self.datas.tick()
+        self.hora_dormir.tick()
+        self.tela_cheia.tick()
+        self.fiscal.tick()
+        self.resumo.tick()
+        self.musica.tick()
         self.efeitos.atualizar(dt, self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala,
                                self.alt_janela - self.sprites.altura_corpo / 2)
 
@@ -727,6 +800,7 @@ class Mascote:
         self.corpo.vy = 0.0
         self.corpo.no_chao = False
         self.salto = self.salto_v = 0.0
+        self.pulando = False
         self.mudar("caindo")
 
     def pular(self, vx, vy):
@@ -737,6 +811,7 @@ class Mascote:
         self.salto = self.salto_v = 0.0
         self.direcao = 1 if vx >= 0 else -1
         self.arremessado = False
+        self.pulando = True
         self.mudar("caindo")
         if random.random() < 0.3 and not self.balao.visivel:
             self.falar("Hup! 🦘", 1)
@@ -745,7 +820,10 @@ class Mascote:
         chao, _ = self.janelas.chao(self.corpo.x, self.corpo.y)    # janela embaixo dele, ou a barra
         if self.corpo.no_chao and chao > self.corpo.y + 1:
             self.corpo.no_chao = False      # escorregou pra fora da janela: volta a cair
-        for nome, vel in fisica.passo(self.corpo, self._limites(chao), self.params, dt):
+        eventos = fisica.passo(self.corpo, self._limites(chao), self.params, dt)
+        if self.pulando and self.corpo.y >= chao:
+            self.corpo.vx = 0.0             # pousou no alvo: não escorrega pra fora da janela
+        for nome, vel in eventos:
             agora = time.perf_counter()
             if nome in ("parede", "teto") and vel > config.VEL_AI * self.k and agora - self._ultimo_ai > 1:
                 self._ultimo_ai = agora
@@ -757,6 +835,7 @@ class Mascote:
                 break
 
     def _pousou(self):
+        self.pulando = False
         self.janelas.pousou(self.corpo.x, self.corpo.y)
         if not self.demo:
             # Lugar favorito: onde foi solto por último

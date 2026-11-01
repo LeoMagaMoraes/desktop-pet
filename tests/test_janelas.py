@@ -171,6 +171,20 @@ class TestPetNasJanelas(BaseMascote):
         self.assertEqual(m.corpo.y, j.topo)
         self.assertEqual(m.janelas.hwnd, j.hwnd)
 
+    def test_pulo_longe_pra_beirada_nao_escorrega_pra_fora(self):
+        # Alvo no cantinho da janela: chega rápido de lado e tem que fincar o pé
+        m = self.m
+        j = self.janela_no_meio(topo_acima_da_barra=300)
+        self.janelas([j])
+        m.corpo.x = j.esquerda - 150
+        m.mudar("parado", 10)
+        with mock.patch("pet.janelas.random.random", return_value=0.0), \
+                mock.patch("pet.janelas.random.uniform", side_effect=lambda a, b: b):
+            self.assertTrue(m.janelas.tentar_pular())
+        self.rodar_ticks(2.5)
+        self.assertEqual(m.corpo.y, j.topo)
+        self.assertEqual(m.janelas.hwnd, j.hwnd)
+
     def test_escorregar_pra_fora_da_janela_faz_cair(self):
         m = self.m
         j = self.janela_no_meio()

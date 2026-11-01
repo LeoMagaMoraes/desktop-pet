@@ -168,7 +168,7 @@ class ControleClima:
 
     def _vestir(self):
         m = self.m
-        m.vestir(self.roupas())
+        m.atualizar_roupas()
         c = self.vigente()
         calor = especies.especie(m.especie).calor          # o pinguim sente calor antes
         m.efeitos.ventilador_ligado(bool(c and c.temperatura > calor and m.fase != "ovo"))

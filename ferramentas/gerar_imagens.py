@@ -109,6 +109,20 @@ def gerar_docs():
     roupas = [para_pil(pixelart.animacoes("clawd", frozenset(r))["parado"][1][0], 6) for r in looks]
     roupas.append(para_pil(an["tremendo"][1][0], 6))
     lado_a_lado(roupas, 24).save(pasta / "roupas.png")
+    # Datas especiais: Natal, Ano Novo/aniversário, Halloween e Páscoa
+    festas = [para_pil(pixelart.animacoes("clawd", frozenset({r}))["parado"][1][0], 6)
+              for r in ("gorro_natal", "chapeu_festa", "chapeu_bruxa", "orelhas_coelho")]
+    lado_a_lado(festas, 24).save(pasta / "datas.png")
+    # Loja: cada acessório num pet diferente
+    itens = [("flor", "coruja"), ("laco", "porquinho"), ("gravata", "pinguim"), ("bone", "tubarao"),
+             ("oculos_coracao", "pato"), ("coroa", "dragao")]
+    loja = [para_pil(pixelart.animacoes("clawd", frozenset({i}), b)["parado"][1][0], 6) for i, b in itens]
+    lado_a_lado(loja, 24).save(pasta / "loja.png")
+    # Rotina: bocejando (hora de dormir), dançando de fone (música) e a plaquinha do fiscal do git
+    an_fone = pixelart.animacoes("clawd", frozenset({"fone"}))
+    rotina = [para_pil(an["bocejando"][1][1], 6), para_pil(an_fone["dancando"][1][0], 6),
+              para_pil(an_fone["dancando"][1][2], 6), para_pil(an["placa"][1][0], 6)]
+    lado_a_lado(rotina, 24).save(pasta / "rotina.png")
     # A turma toda, adulta, lado a lado (topo do README)
     turma = [para_pil(pixelart.animacoes("clawd", especie=b)["parado"][1][0], 5) for b in pixelart.BICHOS]
     lado_a_lado(turma, 20).save(pasta / "turma.png")

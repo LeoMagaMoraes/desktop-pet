@@ -35,6 +35,13 @@ class BaseMascote(unittest.TestCase):
         self.m.estado.dados["claude"]["sons"] = False      # teste sem bipe
         self.m.clima._prox_busca = float("inf")            # teste sem internet
         self.janelas([])                                    # ...e sem as janelas abertas de verdade
+        # Nada do PC de verdade mexendo no teste: som tocando, tela cheia, data de hoje, 18h, git
+        rotina = self.m.estado.dados["rotina"]
+        rotina.update(musica=False, tela_cheia=False, resumo_auto=False)
+        self.m.datas._prox = float("inf")
+        self.m.datas.atual = None
+        self.m.atualizar_roupas()
+        self.m.fiscal._prox = float("inf")
         self.m.root.deiconify()
         self.m.root.update()
 

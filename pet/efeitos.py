@@ -1,4 +1,4 @@
-"""Partículas em volta do Clawd: coração, Zzz, migalhas, bolhas, gotas, estrelinhas e mosquinhas."""
+"""Partículas em volta do pet: coração, Zzz, migalhas, bolhas, gotas, notinhas, confete, estrelinhas e mosquinhas."""
 
 import math
 import random
@@ -61,6 +61,20 @@ class Efeitos:
         for _ in range(8):
             self._soltar("fumaca", x + random.uniform(-30, 30) * k, y + random.uniform(-20, 20) * k,
                          random.uniform(-40, 40) * k, random.uniform(-60, -20) * k, 0.9, balanco=4 * k)
+
+    def nota(self, x, y, direcao):
+        """Notinha musical subindo e balançando (música tocando)."""
+        k = self.k
+        tipo = random.choice(("nota", "nota_b"))
+        self._soltar(tipo, x, y, direcao * random.uniform(10, 25) * k, -30 * k, 1.6, balanco=5 * k)
+
+    def confete(self, x, y):
+        """Chuvinha de confete colorido (aniversário, Ano Novo, Carnaval)."""
+        k = self.k
+        for _ in range(14):
+            self._soltar(random.choice(("confete_r", "confete_y", "confete_a", "confete_e")),
+                         x + random.uniform(-10, 10) * k, y, random.uniform(-90, 90) * k,
+                         random.uniform(-260, -140) * k, 1.4, gravidade=380 * k, balanco=3 * k)
 
     def quantidade_moscas(self, n):
         """Deixa exatamente n mosquinhas voando em volta dele."""

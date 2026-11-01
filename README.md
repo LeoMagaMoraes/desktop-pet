@@ -17,7 +17,7 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dependências](https://img.shields.io/badge/depend%C3%AAncias-nenhuma-7BC67B)
-![Testes](https://img.shields.io/badge/testes-225%20passando-7BC67B)
+![Testes](https://img.shields.io/badge/testes-282%20passando-7BC67B)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-hooks-D97757)
 
 [Instalar](#-instalar) · [Usar](#-usar) · [Janelas](#-andando-nas-janelas) · [Tamagotchi](#-tamagotchi) · [Pets](#-pets) · [Clima](#-clima) · [Claude Code](#-integração-com-o-claude-code) · [Sprites](#-sprites-próprios) · [Estrutura](#-estrutura)
@@ -38,6 +38,11 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 - 📊 **Conta tokens:** da sessão, da task e dos últimos 7 dias, com meta semanal.
 - 🌦️ **Sente o tempo lá fora:** se veste conforme o clima de verdade da sua cidade, se esconde na trovoada e
   avisa de manhã se vai chover.
+- ⏰ **Lembra você das coisas:** escreva o quê e quando (*"amanhã 9h"*, *"daqui a 20 min"*) e na hora ele
+  acena com um balão e um alarminho até você ver.
+- 🌙 **Tem rotina:** te manda dormir na hora que você escolher, comemora Natal, Páscoa e o seu aniversário,
+  dança quando tem música tocando e some quando você abre um jogo em tela cheia.
+- 🛍️ **Loja:** gaste XP em acessórios (coroa, boné, laço...) sem perder evolução.
 - 🐉 **Nove pets:** Clawd, dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha,
   porquinho-da-índia e coala, cada um com o próprio progresso e o próprio jeito.
 - 🖥️ **Se vira em vários monitores** e lembra onde você o deixou.
@@ -81,7 +86,7 @@ Só abre um pet por vez. Pra fechar: clique direito → **Sair**.
 
 | Ação | O que acontece |
 |---|---|
-| **Clique** | Carinho: um coração sobe, ganha felicidade e XP, e ele diz a temperatura lá fora. Se estiver dormindo, acorda |
+| **Clique** | Carinho: um coração sobe, ganha felicidade e XP, e ele diz a temperatura lá fora. Se estiver dormindo, acorda. Se estiver tocando um lembrete, é o *"ok, vi"* |
 | **Clique direito** | Abre o menu |
 | **Arrastar** | Ele fica pendurado balançando as perninhas e cai com gravidade ao soltar |
 | **Arrastar e soltar rápido** | Sai voando e quica nas bordas da tela |
@@ -114,6 +119,59 @@ Além da barra de tarefas, a **borda de cima de cada janela aberta** vira chão.
 - Só conta a parte da borda que está **visível**: se outra janela está na frente, ali não dá pra pisar.
   Janelas maximizadas também não servem (não sobra espaço em cima).
 - Não gostou? Menu → **AJUSTES** → desligue **Andar nas janelas** (se ele estiver em cima de uma, ele desce).
+
+## ⏰ Lembretes
+
+Menu → **VER** → **Lembretes** → **Novo lembrete**. Escreva *o que* lembrar e *quando*; embaixo aparece como ele
+entendeu (*"→ sexta (06/11) às 14:00"*), pra não ter surpresa.
+
+| Você escreve | Ele entende |
+|---|---|
+| `15:30`, `15h`, `às 15`, `meio-dia` | hoje nesse horário (ou amanhã, se já passou) |
+| `daqui a 20 min`, `em 2 horas`, `em 1h30` | contando a partir de agora |
+| `amanhã 9h`, `depois de amanhã às 14`, `hoje 18:00` | o dia e a hora (sem hora: 9h) |
+| `sexta 14h`, `segunda às 8` | o próximo dia com esse nome |
+| `25/12 8h`, `5/1/2027 9:15` | a data (sem ano: a próxima vez que ela chegar) |
+| `todo dia 9h` | todo dia, nesse horário |
+
+Na hora, o pet **acorda se estiver dormindo, acena sem parar** com o balão *"⏰ Lembrete: ..."* e toca um alarminho
+(se os sons estiverem ligados).
+
+- **Clique nele** pra dizer que viu (*"Beleza! ✅"*).
+- Ou abra o menu: aparecem **Feito!** e **Me lembra em 10 min** no topo.
+- **PC desligado na hora marcada?** Quando ele abrir, avisa assim mesmo, dizendo pra quando era.
+- A página **Lembretes** lista os próximos; clicar num deles apaga.
+
+## 🌙 Rotina, festas e música
+
+<p align="center"><img src="docs/rotina.png" alt="Bocejando, dançando de fone e segurando a plaquinha do commit"></p>
+
+Tudo em menu → **AJUSTES** → **Rotina e datas**.
+
+- **Hora de dormir:** escolha um horário (ex.: `23:00`). Passou dele, ele boceja e te manda ir dormir a cada
+  20 minutos; se você sair do PC, ele dorme também. Até as 5h ainda conta como "depois da hora".
+- **Datas especiais:** gorro no **Natal**, chapéu de festa e confete no **Ano Novo** e no **Carnaval**, chapéu de
+  bruxa no **Halloween**, orelhas de coelho na **Páscoa** e um parabéns no **Dia do Programador** (dia 256 do ano).
+  Cadastre o **seu aniversário** e ele faz festa com confete e canta parabéns.
+- **Música:** quando sai som do PC por alguns segundos seguidos, ele põe o fone 🎧, solta notinhas e dança.
+  O volume vem direto do Windows, sem instalar nada; bipes e notificações curtas não contam.
+- **Tela cheia:** abriu um jogo, filme ou apresentação em tela cheia no monitor dele, ele some e volta quando
+  você sair. Lembrete tocando faz ele aparecer mesmo assim.
+- **Resumo do dia:** às 18h (ou quando quiser, em menu → **VER** → **Resumo do dia**) ele conta o seu dia: tempo no
+  PC, tasks e tokens do Claude Code, testes, projetos e quantos carinhos e comidas ele ganhou.
+
+<p align="center"><img src="docs/datas.png" alt="Gorro de Natal, chapéu de festa, chapéu de bruxa e orelhas de coelho"></p>
+
+## 🛍️ Loja
+
+<p align="center"><img src="docs/loja.png" alt="Flor, laço, gravata-borboleta, boné, óculos de coração e coroa"></p>
+
+Menu → **VER** → **Loja**. Gaste XP em acessórios: flor, laço, gravata-borboleta, boné, óculos de coração e coroa.
+
+- **Comprar não tira evolução:** o XP total continua (é ele que decide a fase); o gasto fica separado.
+- **O guarda-roupa é de todos os pets**, mas quem paga é o pet que está na tela.
+- Um item por lugar (cabeça, rosto, pescoço). Clique de novo pra tirar; pôr de volta é de graça.
+- Roupa de festa e do clima ganham do chapéu da loja enquanto valem (no Natal é gorro, na chuva é guarda-chuva).
 
 ## 🥚 Tamagotchi
 
@@ -224,6 +282,12 @@ a cada 30 minutos, numa thread separada. Sem internet, continua com o último cl
 | Um comando de teste falha | Cai duro de costas 💀 |
 | Um comando dá erro | Facepalm 🤦 |
 | Você fica dias sem usar o Claude | Fica com fome e tristinho |
+| Mudança parada há mais de 2 h sem commit | Levanta uma plaquinha **"commit?"** com o projeto e o tempo |
+
+O **fiscal do git** olha só as pastas onde o Claude Code trabalhou nas últimas 12 h, a cada 10 minutos e
+logo depois de cada task. Avisa quando tem mudança sem commit há mais de 2 h (ou mais de 300 linhas mudadas),
+no máximo a cada 45 minutos por projeto, e nunca enquanto o Claude está trabalhando. Desliga em
+menu → **Claude Code** → **Fiscal do git**.
 
 Testes reconhecidos: pytest, unittest, npm/pnpm/yarn/bun test, jest, vitest, go/cargo/dotnet/mvn/gradle test,
 make test/check, Invoke-Pester e outros. Se a saída disser "2 failed", conta como falha mesmo com código 0.
@@ -299,8 +363,8 @@ O ícone e as imagens deste README saem da mesma pixel art: `python ferramentas/
 python -m unittest discover -s tests -t .
 ```
 
-São 225 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
-contagem de tokens, o menu, os pets, as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
+São 282 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
+contagem de tokens, o menu, os pets, os lembretes (que entendem "amanhã 9h"), as datas especiais, a loja, o fiscal do git (com repositórios de mentira), as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
 do Clawd. Os que abrem janela usam uma pasta temporária no lugar do seu `~/.claude`.
 
 ## 🗂 Estrutura
@@ -334,6 +398,15 @@ pet/
   pixelart.py         toda a pixel art: todos os bichos em cada fase, roupas, efeitos, ícones
   especies.py         os pets, o jeito de cada um e a troca entre eles (progresso separado)
   janelas.py          andar em cima das janelas: chão de cada janela, pulos, carona e quedas
+  lembretes.py        entende o "quando" (amanhã 9h, daqui a 20 min...) e dispara os lembretes
+  dialogo_lembrete.py janelinha de novo lembrete, com a prévia do horário
+  datas.py            datas especiais e o seu aniversário (Páscoa e Carnaval calculados)
+  hora_dormir.py      hora de dormir: bocejo, "vai dormir!" e soneca se você sair
+  tela_cheia.py       some quando um programa abre em tela cheia
+  fiscal_git.py       olha o git dos projetos do Claude Code e pede commit
+  resumo.py           resumo do dia (tempo no PC, tasks, tokens, carinhos)
+  musica.py           medidor de volume do Windows pelo ctypes, fone e dancinha
+  loja.py             acessórios comprados com XP
   estado.py           save em pet.json
   sons.py             sonzinhos com winsound
   tela.py             API do Windows: DPI, monitores, janelas abertas, tempo ocioso, janela em foco
@@ -356,7 +429,8 @@ O save fica em `pet.json` e os erros em `pet.log`, ambos na pasta do projeto (fo
 - [x] **Extra:** troca de pet: dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha,
   porquinho-da-índia e coala
 - [x] **Extra:** andar em cima das janelas (pousar, pular, pegar carona)
-- [ ] **Fase 5:** loja de acessórios, fiscal do git, hora de dormir, datas especiais, música e conversa com o Claude
+- [x] **Fase 5:** lembretes, datas especiais, hora de dormir, tela cheia, fiscal do git, resumo do dia, música e loja
+- [ ] **Depois:** conversar com o pet pela API do Claude (duplo clique)
 
 <div align="center">
 <sub>Feito com 🧡 e muitos tokens. Clawd é o mascote do <a href="https://claude.com/claude-code">Claude Code</a>.</sub>

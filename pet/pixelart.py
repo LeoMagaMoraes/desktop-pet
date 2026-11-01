@@ -131,15 +131,19 @@ PELE_CLAWD = Pele(LARANJA, SOMBRA)
 
 def criatura(olhos="aberto", braco_esq="normal", braco_dir="normal", pernas="normal",
              dy=0, dx=0, olhar=0, boca=None, bochecha=False, respira=False,
-             forma=ADULTO, acessorios=(), laptop=False, pele=PELE_CLAWD, atras=None, frente=None):
+             forma=ADULTO, acessorios=(), laptop=False, pele=PELE_CLAWD, atras=None, frente=None,
+             placa=False):
     """Desenha um quadro de um bicho de corpo quadradinho (o Clawd e os outros pets).
 
     pernas: normal, passoA, passoB (andando), balancoA, balancoB (pendurado)
     dy/dx: desloca o corpo (agachar, esconder, cambalear)
     olhar: -1/+1 desloca as pupilas pros lados
     respira: abaixa uma linha do topo (dormindo)
-    acessorios: "cartola", "oculos", "barba" (ancião) e as roupas do clima:
-                "oculos_sol", "guarda_chuva", "galochas", "gorro", "cachecol", "pijama"
+    acessorios: "cartola", "oculos", "barba" (ancião), as roupas do clima ("oculos_sol",
+                "guarda_chuva", "galochas", "gorro", "cachecol", "pijama"), as das datas especiais
+                ("gorro_natal", "chapeu_festa", "chapeu_bruxa", "orelhas_coelho"), as da loja
+                ("coroa", "bone", "laco", "flor", "oculos_coracao", "gravata") e o "fone" da música
+    placa: segura uma plaquinha em cima da cabeça (o fiscal do git)
     pele: cores do corpo; atras/frente: funções que desenham detalhes do bicho
           (asas e cauda atrás do corpo, barriga e chifres na frente)
     """
@@ -221,20 +225,23 @@ def criatura(olhos="aberto", braco_esq="normal", braco_dir="normal", pernas="nor
         g.ponto(f.x0 + 1 + dx, t + f.braco_dy + 1, ROSA)
         g.ponto(_espelho(f.x0 + 1) + dx, t + f.braco_dy + 1, ROSA)
 
-    if "oculos_sol" in acessorios:
-        _oculos_sol(g, f, ey, dx)
-    elif "oculos" in acessorios:
-        _oculos(g, f, ey, dx)
-    if "gorro" in acessorios:
-        _gorro(g, f, t, dx)
-    elif "pijama" in acessorios:
-        _touca(g, f, t, dx)
-    elif "cartola" in acessorios:
-        _cartola(g, f, t, dx)
+    if "gravata" in acessorios and "cachecol" not in acessorios:
+        _gravata(g, f, t, dx)
+    for nome in OCULOS:                        # só um par de óculos (o primeiro da lista ganha)
+        if nome in acessorios:
+            _DESENHO_OCULOS[nome](g, f, ey, dx)
+            break
+    chapeu = next((nome for nome in CHAPEUS if nome in acessorios), None)   # só um chapéu
+    if chapeu:
+        _DESENHO_CHAPEU[chapeu](g, f, t, dx)
+    if "fone" in acessorios:
+        _fone(g, f, t, ey, dx, com_chapeu=chapeu is not None)
     if "guarda_chuva" in acessorios:
         _guarda_chuva(g, f, t, dx)
     if laptop:
         _laptop(g, f, t)
+    if placa:
+        _placa(g, f, t, dx)
     return g
 
 
@@ -310,6 +317,16 @@ def _laptop(g, f, t):
     g.ponto(LARGURA // 2 - 1, (topo + ALTURA - 1) // 2, BRANCO)
 
 
+def _placa(g, f, t, dx):
+    # Plaquinha clara erguida acima da cabeça, com "letrinhas" (o balão diz o que está escrito)
+    x0, x1 = f.x0 - 2 + dx, _espelho(f.x0 - 2) + dx
+    g.retangulo(x0, t - 5, x1, t - 3, CASCA)
+    g.retangulo(x0, t - 3, x1, t - 3, CASCA_SOMBRA)
+    for x in range(x0 + 1, x1):
+        if (x - x0) % 4 != 0:
+            g.ponto(x, t - 4, PRETO)
+
+
 def de_cabeca_pra_baixo(grade, descer):
     """Vira a grade de ponta-cabeça e desce `descer` linhas (pra encostar no chão)."""
     g = Grade(grade.largura, grade.altura)
@@ -342,6 +359,150 @@ def _cartola(g, f, t, dx):
     g.retangulo(x0, t - 1, x1, t - 1, PRETO)                 # aba
     g.retangulo(x0 + 2, t - 3, x1 - 2, t - 2, PRETO)         # copa
     g.retangulo(x0 + 2, t - 2, x1 - 2, t - 2, FITA)          # fita
+
+
+# --- datas especiais, loja e música -------------------------------------------
+
+VERMELHO_NATAL = "#D93A3A"
+FESTA = ("#F06292", "#4FC3F7", "#FFD34D")
+BRUXA = "#4B2C6B"
+BRUXA_FAIXA = "#F28C28"
+COELHO = "#F4F1EA"
+OURO = "#F2C14E"
+OURO_SOMBRA = "#C99A2E"
+RUBI = "#E8455A"
+BONE = "#3E7CC9"
+BONE_ABA = "#2C5E9E"
+LACO = "#F06292"
+LACO_NO = "#C2185B"
+GRAVATA = "#C8423B"
+GRAVATA_NO = "#8B2E2E"
+FONE = "#9AA0A6"
+FONE_COR = "#4FC3F7"
+
+
+def _gorro_natal(g, f, t, dx):
+    # Gorro vermelho caído pro lado, barra branca e pompom
+    x0, x1 = f.x0 + 1 + dx, _espelho(f.x0 + 1) + dx
+    g.retangulo(x0, t - 1, x1, t - 1, BRANCO)
+    g.retangulo(x0 + 1, t - 2, x1 - 1, t - 2, VERMELHO_NATAL)
+    g.retangulo(x0 + 3, t - 3, x1 - 1, t - 3, VERMELHO_NATAL)
+    g.retangulo(x1 - 2, t - 4, x1, t - 4, VERMELHO_NATAL)
+    g.retangulo(x1 + 1, t - 4, x1 + 2, t - 3, BRANCO)
+
+
+def _chapeu_festa(g, f, t, dx):
+    # Cone listrado no meio da cabeça com uma bolinha em cima
+    meio = LARGURA // 2 + dx
+    for i, (y, meia) in enumerate(((t - 1, 2), (t - 2, 2), (t - 3, 1), (t - 4, 1))):
+        g.retangulo(meio - meia, y, meio + meia - 1, y, FESTA[i % 3])
+    g.retangulo(meio - 1, t - 5, meio, t - 5, FESTA[2])
+
+
+def _chapeu_bruxa(g, f, t, dx):
+    # Aba larga, faixa laranja e a ponta entortada pro lado
+    x0, x1 = f.x0 + dx, _espelho(f.x0) + dx
+    meio = LARGURA // 2 + dx
+    g.retangulo(x0, t - 1, x1, t - 1, BRUXA)
+    g.retangulo(meio - 3, t - 2, meio + 2, t - 2, BRUXA_FAIXA)
+    g.retangulo(meio - 2, t - 3, meio + 1, t - 3, BRUXA)
+    g.retangulo(meio - 1, t - 4, meio + 1, t - 4, BRUXA)
+    g.retangulo(meio + 1, t - 5, meio + 2, t - 5, BRUXA)
+
+
+def _orelhas_coelho(g, f, t, dx):
+    # Tiara com duas orelhonas brancas, rosinhas por dentro
+    meio = LARGURA // 2 + dx
+    g.retangulo(f.x0 + 1 + dx, t - 1, _espelho(f.x0 + 1) + dx, t - 1, COELHO)
+    for ex in (meio - 4, meio + 2):
+        g.retangulo(ex, t - 5, ex + 1, t - 2, COELHO)
+        g.retangulo(ex + (1 if ex < meio else 0), t - 4, ex + (1 if ex < meio else 0), t - 2, ROSA)
+
+
+def _coroa(g, f, t, dx):
+    # Coroa dourada com três pontas e rubis
+    meio = LARGURA // 2 + dx
+    g.retangulo(meio - 3, t - 1, meio + 2, t - 1, OURO)
+    for px in (meio - 3, meio - 1, meio, meio + 2):
+        g.ponto(px, t - 2, OURO)
+    g.ponto(meio - 3, t - 3, OURO)
+    g.ponto(meio + 2, t - 3, OURO)
+    g.retangulo(meio - 1, t - 3, meio, t - 3, OURO_SOMBRA)
+    g.ponto(meio - 2, t - 1, RUBI)
+    g.ponto(meio + 1, t - 1, RUBI)
+
+
+def _bone(g, f, t, dx):
+    # Boné azul com a aba pra frente (pro lado em que ele olha)
+    x0, x1 = f.x0 + 1 + dx, _espelho(f.x0 + 1) + dx
+    g.retangulo(x0, t - 1, x1, t - 1, BONE)
+    g.retangulo(x0 + 2, t - 2, x1 - 2, t - 2, BONE)
+    g.retangulo(x1 + 1, t - 1, x1 + 3, t - 1, BONE_ABA)
+    g.ponto(LARGURA // 2 + dx, t - 3, BONE_ABA)
+
+
+def _laco(g, f, t, dx):
+    # Laço rosa no cantinho da cabeça
+    cx = _espelho(f.x0 + 3) + dx
+    for y in (t - 2, t - 1):
+        g.retangulo(cx - 2, y, cx - 1, y, LACO)
+        g.retangulo(cx + 1, y, cx + 2, y, LACO)
+    g.ponto(cx, t - 2, LACO_NO)
+    g.ponto(cx, t - 1, LACO_NO)
+
+
+def _flor(g, f, t, dx):
+    # Florzinha branca de miolo amarelo atrás da "orelha"
+    cx = _espelho(f.x0 + 2) + dx
+    for px, py in ((cx - 1, t - 2), (cx + 1, t - 2), (cx, t - 3), (cx, t - 1)):
+        g.ponto(px, py, BRANCO)
+    g.ponto(cx, t - 2, "#FFD34D")
+
+
+def _oculos_coracao(g, f, ey, dx):
+    # Um coraçãozinho vermelho em cada olho
+    for cx in (f.olho_x, _espelho(f.olho_x)):
+        cx += dx
+        g.ponto(cx - 1, ey - 1, RUBI)
+        g.ponto(cx + 1, ey - 1, RUBI)
+        g.retangulo(cx - 1, ey, cx + 1, ey, RUBI)
+        g.ponto(cx, ey + 1, RUBI)
+    g.retangulo(f.olho_x + 2 + dx, ey, _espelho(f.olho_x) - 2 + dx, ey, GRAVATA_NO)
+
+
+def _gravata(g, f, t, dx):
+    # Gravata-borboleta logo abaixo da boca
+    meio = LARGURA // 2 + dx
+    y = t + f.boca_dy + 1
+    g.retangulo(meio - 3, y, meio - 2, y, GRAVATA)
+    g.retangulo(meio + 1, y, meio + 2, y, GRAVATA)
+    g.retangulo(meio - 1, y, meio, y, GRAVATA_NO)
+    g.ponto(meio - 3, y - 1, GRAVATA)
+    g.ponto(meio + 2, y - 1, GRAVATA)
+    g.ponto(meio - 3, y + 1, GRAVATA)
+    g.ponto(meio + 2, y + 1, GRAVATA)
+
+
+def _fone(g, f, t, ey, dx, com_chapeu=False):
+    # Conchas coloridas de 2 colunas dos lados da cabeça e o arco por cima (some embaixo do chapéu)
+    for lado in (-1, 1):
+        x = f.x0 - 2 if lado < 0 else _espelho(f.x0 - 1)
+        g.retangulo(x + dx, ey - 1, x + 1 + dx, ey + 1, FONE_COR)
+        g.retangulo(x + dx, ey - 1, x + 1 + dx, ey - 1, FONE)
+        arco = f.x0 - 1 if lado < 0 else _espelho(f.x0 - 1)
+        g.retangulo(arco + dx, t - 1, arco + dx, ey - 2, FONE)
+    if not com_chapeu:
+        g.retangulo(f.x0 + dx, t - 1, _espelho(f.x0) + dx, t - 1, FONE)
+
+
+# Ordem de preferência quando tem mais de um: data especial > clima > loja > fase (ancião)
+CHAPEUS = ("gorro_natal", "chapeu_bruxa", "orelhas_coelho", "chapeu_festa", "gorro", "pijama",
+           "coroa", "bone", "laco", "flor", "cartola")
+_DESENHO_CHAPEU = {"gorro_natal": _gorro_natal, "chapeu_bruxa": _chapeu_bruxa, "orelhas_coelho": _orelhas_coelho,
+                   "chapeu_festa": _chapeu_festa, "gorro": _gorro, "pijama": _touca, "coroa": _coroa,
+                   "bone": _bone, "laco": _laco, "flor": _flor, "cartola": _cartola}
+OCULOS = ("oculos_sol", "oculos_coracao", "oculos")
+_DESENHO_OCULOS = {"oculos_sol": _oculos_sol, "oculos_coracao": _oculos_coracao, "oculos": _oculos}
 
 
 # --- ovo ---------------------------------------------------------------------
@@ -797,6 +958,15 @@ def _animacoes_criatura(forma, acessorios, estilo):
         # Perto da meta semanal de tokens
         "empanturrado": (400, [c(olhos="sonolento", bochecha=True, boca="fechada")] * 6
                          + [c(olhos="fechado", bochecha=True, respira=True)] * 2),
+        # Hora de dormir: bocejão
+        "bocejando": (450, [c(olhos="sonolento"), c(olhos="fechado", boca="aberta"),
+                            c(olhos="fechado", boca="aberta"), c(olhos="sonolento", boca="fechada")]),
+        # Música tocando: balança pros lados com um bracinho pra cima de cada vez
+        "dancando": (230, [c(olhos="feliz", dx=-1, braco_esq="cima", pernas="passoA"), c(olhos="feliz"),
+                           c(olhos="feliz", dx=1, braco_dir="cima", pernas="passoB"), c(olhos="feliz")]),
+        # Fiscal do git: "commit?"
+        "placa": (500, [c(braco_esq="cima", braco_dir="cima", placa=True),
+                        c(braco_esq="cima", braco_dir="cima", placa=True, olhar=1)]),
     }
 
 
@@ -827,13 +997,15 @@ ACESSORIOS_DA_FASE = {"anciao": frozenset({"cartola", "oculos", "barba"})}
 
 
 def vestir(fase, roupas_do_clima):
-    """Junta os acessórios da fase com as roupas do clima, sem conflito:
-    óculos escuros no lugar dos de grau, gorro ou touca no lugar da cartola."""
+    """Junta os acessórios da fase com as outras roupas (clima, datas, loja, fone), sem conflito:
+    só um chapéu e um par de óculos (ver CHAPEUS e OCULOS), cachecol esconde a gravata."""
     r = set(ACESSORIOS_DA_FASE.get(fase, ())) | set(roupas_do_clima)
-    if "oculos_sol" in r:
-        r.discard("oculos")
-    if "gorro" in r or "pijama" in r:
-        r.discard("cartola")
+    for lista in (CHAPEUS, OCULOS):
+        usados = [nome for nome in lista if nome in r]
+        # Fica só o primeiro; o pijama continua (ele também é a roupa do corpo, só perde a touca)
+        r -= {nome for nome in usados[1:] if nome != "pijama"}
+    if "cachecol" in r:
+        r.discard("gravata")
     return frozenset(r)
 
 
@@ -864,7 +1036,7 @@ ANIMACOES = animacoes("clawd")
 # Efeitos que flutuam em volta dele
 _CORES_EFEITO = {"R": "#E8455A", "W": BRANCO, "Y": "#FFD34D", "Z": "#8FB4FF", "M": "#E8B26A",
                  "K": "#2A2A2A", "G": "#C9D6E3", "B": "#BFE6FF", "A": "#7CC4F2", "D": "#5A606A",
-                 "F": "#F28C28", "H": "#E8D28A", "E": "#6BBF59"}
+                 "F": "#F28C28", "H": "#E8D28A", "E": "#6BBF59", "P": "#C77DFF", "T": "#4FC3F7"}
 EFEITOS = {
     "coracao": de_texto([".RR.RR.",
                          "RWRRRRR",
@@ -906,6 +1078,22 @@ EFEITOS = {
     "pena": de_texto([".M",
                       "MW",
                       "M."], _CORES_EFEITO),
+    # Notinha musical (música tocando) em duas cores
+    "nota": de_texto(["..PP",
+                      "..P.",
+                      "..P.",
+                      "PPP.",
+                      "PP.."], _CORES_EFEITO),
+    "nota_b": de_texto(["..TT",
+                        "..T.",
+                        "..T.",
+                        "TTT.",
+                        "TT.."], _CORES_EFEITO),
+    # Confete (aniversário, Ano Novo, Carnaval)
+    "confete_r": de_texto(["RR", "RR"], _CORES_EFEITO),
+    "confete_y": de_texto(["YY", "YY"], _CORES_EFEITO),
+    "confete_a": de_texto(["AA", "AA"], _CORES_EFEITO),
+    "confete_e": de_texto(["EE", "EE"], _CORES_EFEITO),
     # Fumacinha da troca de pet
     "fumaca": de_texto([".GGG.",
                         "GGWGG",
@@ -1084,6 +1272,38 @@ ICONES = {
                       "RWRRRRWR",
                       ".RWWWWR.",
                       "..RRRR.."], _CORES_ICONE),
+    "relogio": de_texto(["RR....RR",            # despertador: sininhos em cima, ponteiros dentro
+                         "R.RRRR.R",
+                         ".RWWWWR.",
+                         "RWWKWWWR",
+                         "RWWKWWWR",
+                         "RWWKKKWR",
+                         ".RWWWWR.",
+                         "R.RRRR.R"], _CORES_ICONE),
+    "lista": de_texto(["..DDDD..",             # prancheta com linhas (resumo, fiscal)
+                       ".WWWWWW.",
+                       ".WKKKKW.",
+                       ".WWWWWW.",
+                       ".WKKKWW.",
+                       ".WWWWWW.",
+                       ".WKKKKW.",
+                       ".WWWWWW."], _CORES_ICONE),
+    "sacola": de_texto(["..M..M..",            # sacolinha de compras (loja)
+                        ".M....M.",
+                        "OOOOOOOO",
+                        "OOOOOOOO",
+                        "OOOYYOOO",
+                        "OOOYYOOO",
+                        "OOOOOOOO",
+                        ".SSSSSS."], _CORES_ICONE),
+    "bolo": de_texto(["...Y....",              # bolo com velinha (aniversário)
+                      "...R....",
+                      "..WWWW..",
+                      ".RWRRWR.",
+                      ".MMMMMM.",
+                      ".EEEEEE.",
+                      ".MMMMMM.",
+                      "KKKKKKKK"], _CORES_ICONE),
     "som": de_texto(["...C....",
                      "..CC..B.",
                      "CCCC...B",

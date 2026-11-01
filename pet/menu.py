@@ -8,7 +8,7 @@ Fecha com Esc, clicando fora ou escolhendo uma opção.
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import especies, necessidades, pixelart, tela, tokens
+from . import especies, lembretes, loja, necessidades, pixelart, tela, tokens
 from .sprites import grade_para_imagem
 
 FUNDO = "#262422"
@@ -115,7 +115,8 @@ class MenuClawd:
         tk.Frame(self.corpo, width=self.largura, height=0, bg=FUNDO).pack()   # largura mínima
         {"principal": self._pagina_principal, "monitor": self._pagina_monitor,
          "claude": self._pagina_claude, "clima": self._pagina_clima,
-         "pets": self._pagina_pets}[self.pagina]()
+         "pets": self._pagina_pets, "lembretes": self._pagina_lembretes, "loja": self._pagina_loja,
+         "rotina": self._pagina_rotina}[self.pagina]()
         self._posicionar()
 
     def _posicionar(self):
@@ -135,6 +136,13 @@ class MenuClawd:
         ativo = m.tama.ativo
         s = m.estado.status
 
+        tocando = m.lembretes.ativo
+        if tocando:
+            # Lembrete tocando: as respostas dele vêm primeiro
+            self._secao("⏰ " + tocando["texto"][:40])
+            self._item("relogio", "Feito!", m.lembretes.dispensar, destaque_cor="#2E4A2E")
+            self._item("relogio", f"Me lembra em {lembretes.ADIAR_MINUTOS} min", m.lembretes.adiar)
+
         self._secao("CUIDAR")
         barra = (lambda v: (lambda pai: self._mini_barra(pai, v))) if ativo else (lambda v: None)
         self._item("comida", "Alimentar", m.alimentar, direita=barra(s["fome"]))
@@ -152,6 +160,13 @@ class MenuClawd:
         temperatura = m.clima.rotulo()
         self._item("nuvem", "Clima", m.mostrar_clima,
                    direita=(lambda pai: self._etiqueta(pai, temperatura, TEXTO)) if temperatura else None)
+        n_lembretes = len(m.lembretes.lista)
+        self._item("relogio", "Lembretes", lambda: self._ir("lembretes"), fecha=False,
+                   direita=lambda pai: self._etiqueta(pai, f"{n_lembretes or 'nenhum'}  ›"))
+        self._item("lista", "Resumo do dia", m.resumo.mostrar)
+        saldo = m.loja.saldo()
+        self._item("sacola", "Loja", lambda: self._ir("loja"), fecha=False,
+                   direita=lambda pai: self._etiqueta(pai, f"⭐ {saldo} XP  ›"))
 
         self._secao("AJUSTES")
         n = len(m.monitores)
@@ -163,6 +178,8 @@ class MenuClawd:
         cidade = m.clima.d.get("nome_exibido") or m.clima.d.get("cidade") or ""
         self._item("sol", "Clima e cidade", lambda: self._ir("clima"), fecha=False,
                    direita=lambda pai: self._etiqueta(pai, f"{cidade}  ›"))
+        self._item("lua", "Rotina e datas", lambda: self._ir("rotina"), fecha=False,
+                   direita=lambda pai: self._etiqueta(pai, "›"))
         esp = especies.especie(m.especie)
         self._item(esp.icone, "Trocar de pet", lambda: self._ir("pets"), fecha=False,
                    direita=lambda pai: self._etiqueta(pai, f"{esp.nome}  ›"))
@@ -195,6 +212,8 @@ class MenuClawd:
         self._item("alvo", "Meta semanal", m._perguntar_meta,
                    direita=lambda pai: self._etiqueta(pai, tokens.formatar(meta) if meta else "sem meta"))
         self._chave("som", "Sons", d["sons"], lambda: d.__setitem__("sons", not d["sons"]))
+        if m.fiscal.tem_git:
+            self._chave("lista", "Fiscal do git", m.fiscal.ligado, m.fiscal.alternar)
         self._item("plugue", "Reinstalar hooks", m._reinstalar_hooks)
 
         semana = tokens.formatar(cc.contar(cc.semana)) if cc.semana is not None else "contando..."
@@ -221,6 +240,73 @@ class MenuClawd:
                         direita=lambda pai, t=legenda, c=cor: self._etiqueta(pai, t, c))
         self._nota("Cada pet tem o próprio XP e as próprias necessidades. Quem não está na tela "
                    "fica guardado, pausado, até você trocar de volta.")
+
+    def _pagina_lembretes(self):
+        """Novo lembrete + os próximos, em ordem; clicar num deles apaga."""
+        m = self.m
+        self._voltar("Lembretes")
+        self._item("relogio", "Novo lembrete", m.dialogo_lembrete.abrir, negrito=True)
+        proximos = m.lembretes.proximos()
+        if proximos:
+            self._secao("PRÓXIMOS  ·  clique pra apagar")
+        for l in proximos:
+            quando = lembretes.formatar(lembretes.quando_de(l), repetir=l.get("repetir"))
+            texto = l["texto"] if len(l["texto"]) <= 28 else l["texto"][:27] + "…"
+            self._linha("relogio", texto, lambda ident=l["id"]: self._apagar_lembrete(ident),
+                        destaque_cor="#5A2E2E",
+                        direita=lambda pai, q=quando: self._etiqueta(pai, q))
+        if not proximos:
+            self._nota("Nenhum lembrete marcado. Ele te avisa acenando, com um balão e um alarminho; "
+                       "clique nele pra dizer que viu.")
+
+    def _pagina_loja(self):
+        """Um item por acessório, com o pet usando ele na miniatura."""
+        m = self.m
+        lj = m.loja
+        self._voltar("Loja")
+        saldo = lj.saldo()
+        fase = "filhote" if m.fase == "ovo" else m.fase           # ovo não se veste: mostra o filhote
+        for item in loja.ITENS.values():
+            if lj.usando(item.id):
+                legenda, cor = "✓ usando", LARANJA
+            elif lj.comprado(item.id):
+                legenda, cor = "usar", TEXTO
+            else:
+                legenda, cor = f"⭐ {item.preco} XP", VERDE if saldo >= item.preco else APAGADO
+            self._linha(None, f"{item.nome} {item.emoji}", lambda i=item.id: self._escolher_item(i),
+                        negrito=lj.usando(item.id), imagem=self._retrato(m.especie, fase, frozenset({item.id})),
+                        direita=lambda pai, t=legenda, c=cor: self._etiqueta(pai, t, c))
+        nota = f"Saldo: ⭐ {saldo} XP. Comprar não tira a evolução. Clique de novo pra tirar."
+        if m.fase == "ovo":
+            nota += " Ovo não se veste: ele usa quando nascer."
+        self._nota(nota)
+
+    def _escolher_item(self, ident):
+        self.m.falar(self.m.loja.escolher(ident), 2.5)
+        self._montar()
+
+    def _pagina_rotina(self):
+        m = self.m
+        self._voltar("Rotina e datas")
+        hora = m.hora_dormir.hora
+        self._item("lua", "Hora de dormir", m._perguntar_hora_dormir,
+                   direita=lambda pai: self._etiqueta(pai, hora or "desligada"))
+        aniversario = m.estado.dados["rotina"].get("aniversario")
+        self._item("bolo", "Seu aniversário", m._perguntar_aniversario,
+                   direita=lambda pai: self._etiqueta(pai, aniversario or "—"))
+        self._chave("monitor", "Sumir em tela cheia", m.tela_cheia.ligado, m.tela_cheia.alternar)
+        self._chave("som", "Dançar com música", m.musica.ligado, m.musica.alternar)
+        self._chave("lista", "Resumo do dia às 18h", m.resumo.automatico, m.resumo.alternar_automatico)
+        hoje = m.datas.atual
+        if hoje:
+            self._nota(f"Hoje é dia de festa: {hoje.nome}! 🎉")
+        else:
+            self._nota("Ele comemora Natal, Ano Novo, Carnaval, Páscoa, Halloween, Dia do Programador "
+                       "e o seu aniversário.")
+
+    def _apagar_lembrete(self, ident):
+        self.m.lembretes.apagar(ident)
+        self._montar()
 
     def _escolher_pet(self, novo):
         self.fechar()
@@ -254,7 +340,7 @@ class MenuClawd:
         d = m.estado.dados
         topo = tk.Frame(self.corpo, bg=FUNDO, padx=e, pady=e)
         topo.pack(fill="x")
-        tk.Label(topo, image=self._retrato(m.especie, m.fase), bg=FUNDO).pack(side="left", padx=(0, 2 * e))
+        tk.Label(topo, image=self._retrato(m.especie, m.fase, m.roupas), bg=FUNDO).pack(side="left", padx=(0, 2 * e))
         textos = tk.Frame(topo, bg=FUNDO)
         textos.pack(side="left", fill="x", expand=True)
         tk.Label(textos, text=especies.nome_fase(m.especie, m.fase), font=self.fonte_titulo, fg=TEXTO,
@@ -277,11 +363,11 @@ class MenuClawd:
             self._nota("Modo Tamagotchi desligado: status pausados.")
         self._separador()
 
-    def _retrato(self, especie, fase):
-        """Miniatura do bicho parado na fase dele (cabeçalho e página de pets)."""
-        chave = (especie, fase)
+    def _retrato(self, especie, fase, roupas=frozenset()):
+        """Miniatura do bicho parado na fase dele (cabeçalho, pets e loja)."""
+        chave = (especie, fase, roupas)
         if chave not in self._retratos:
-            grade = pixelart.animacoes(fase, especie=especie)["parado"][1][0]
+            grade = pixelart.animacoes(fase, roupas, especie)["parado"][1][0]
             self._retratos[chave] = grade_para_imagem(self.m.root, grade, max(2, self.e // 2))
         return self._retratos[chave]
 

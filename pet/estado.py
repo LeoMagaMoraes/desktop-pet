@@ -15,8 +15,9 @@ PADRAO = {
     "pets": {},
     "status": {"fome": 80, "energia": 80, "felicidade": 80},   # 0 a 100, 100 = ótimo
     "xp": 0,
+    "xp_gasto": 0,              # XP gasto na loja (a fase continua contando o XP total)
     "fase": "ovo",
-    "acessorios": {"comprados": [], "equipados": {}},
+    "acessorios": {"comprados": [], "equipados": {}},   # da loja; equipados: lugar -> item
     "sujeira": 0,               # 0 = limpinho, 100 = cheio de mosquinha
     "doente": False,            # gripado até tomar remédio
     "horas_com_fome": 0.0,      # tempo seguido com fome baixa (leva à gripe)
@@ -29,7 +30,18 @@ PADRAO = {
         "dias_penalizados": 0,                   # dias sem Claude já descontados
         "tasks": 0,                              # tasks finalizadas desde sempre
         "historico": {},                         # "AAAA-MM-DD" -> resumo do dia
+        "fiscal_git": True,                      # plaquinha "commit?" nos projetos do Claude
     },
+    "rotina": {
+        "hora_dormir": None,         # "HH:MM": depois disso ele te manda dormir
+        "aniversario": None,         # "DD/MM": festa no seu aniversário
+        "data_saudada": None,        # dia em que já comemorou a data especial
+        "tela_cheia": True,          # some quando um programa abre em tela cheia
+        "musica": True,              # põe o fone e dança quando tem som tocando
+        "resumo_auto": True,         # resumo do dia às 18h
+        "resumo_mostrado": None,     # dia em que o resumo automático já apareceu
+    },
+    "hoje": None,                    # contadores do resumo do dia (carinhos, minutos no PC...)
     "clima": {
         "cidade": "Florianópolis",
         "estado": "Santa Catarina",
@@ -43,6 +55,7 @@ PADRAO = {
         "previsao_avisada": None,    # dia em que já avisou da chuva de manhã
     },
     "andar_nas_janelas": True,  # pousa, passeia e pula em cima das janelas abertas
+    "lembretes": [],            # [{"id", "texto", "quando" (ISO), "repetir": None ou "diario"}]
     "monitor": None,            # nome do monitor onde ele mora (ex.: \\.\DISPLAY2)
     "lugar_favorito": None,     # onde foi solto por último {"x", "y"}
     "ultima_posicao": None,     # onde estava quando salvou {"x", "y"}
