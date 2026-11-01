@@ -42,6 +42,7 @@ PADRAO = {
         "atualizado": None,
         "previsao_avisada": None,    # dia em que já avisou da chuva de manhã
     },
+    "andar_nas_janelas": True,  # pousa, passeia e pula em cima das janelas abertas
     "monitor": None,            # nome do monitor onde ele mora (ex.: \\.\DISPLAY2)
     "lugar_favorito": None,     # onde foi solto por último {"x", "y"}
     "ultima_posicao": None,     # onde estava quando salvou {"x", "y"}

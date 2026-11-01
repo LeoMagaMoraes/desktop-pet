@@ -2,9 +2,12 @@
 
 <img src="docs/clawd.gif" width="176" alt="Clawd acenando, andando, comemorando, digitando e dormindo">
 
-# Pet de Desktop
+# P.E.T.
 
-**O Clawd, o caranguejinho do Claude Code, e a turma dele morando na sua barra de tarefas.**
+### **P**equeno **E**xplorador de **T**elas
+
+**O Clawd, o caranguejinho do Claude Code, e a turma dele morando na sua barra de tarefas
+(e passeando em cima das suas janelas).**
 
 <img src="docs/turma.png" width="620" alt="Clawd, dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha e porquinho-da-índia">
 
@@ -14,10 +17,10 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dependências](https://img.shields.io/badge/depend%C3%AAncias-nenhuma-7BC67B)
-![Testes](https://img.shields.io/badge/testes-203%20passando-7BC67B)
+![Testes](https://img.shields.io/badge/testes-220%20passando-7BC67B)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-hooks-D97757)
 
-[Instalar](#-instalar) · [Usar](#-usar) · [Tamagotchi](#-tamagotchi) · [Pets](#-pets) · [Clima](#-clima) · [Claude Code](#-integração-com-o-claude-code) · [Sprites](#-sprites-próprios) · [Estrutura](#-estrutura)
+[Instalar](#-instalar) · [Usar](#-usar) · [Janelas](#-andando-nas-janelas) · [Tamagotchi](#-tamagotchi) · [Pets](#-pets) · [Clima](#-clima) · [Claude Code](#-integração-com-o-claude-code) · [Sprites](#-sprites-próprios) · [Estrutura](#-estrutura)
 
 </div>
 
@@ -28,14 +31,15 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 ## ✨ O que ele faz
 
 - 🦀 **Vive na tela:** anda sobre a barra de tarefas, vira nas bordas, e dá pra pegar, arremessar e chacoalhar (ele fica tonto).
+- 🪟 **Explora as janelas:** pousa e passeia em cima das janelas abertas, pula de uma pra outra e pega carona quando você
+  arrasta a janela.
 - 🍖 **É um tamagotchi:** tem fome, energia, felicidade e sujeira, sente o tempo com o PC desligado, pega gripe e evolui de ovo até Clawd ancião.
 - 🤖 **Conversa com o Claude Code:** reage aos seus prompts, ao fim de cada task, a testes passando ou falhando e a comandos com erro.
 - 📊 **Conta tokens:** da sessão, da task e dos últimos 7 dias, com meta semanal.
 - 🌦️ **Sente o tempo lá fora:** se veste conforme o clima de verdade da sua cidade, se esconde na trovoada e
   avisa de manhã se vai chover.
 - 🐉 **Oito pets:** Clawd, dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha e
-  porquinho-da-índia,
-  cada um com o próprio progresso e o próprio jeito.
+  porquinho-da-índia, cada um com o próprio progresso e o próprio jeito.
 - 🖥️ **Se vira em vários monitores** e lembra onde você o deixou.
 - 🪶 **Leve:** Python puro com tkinter, sem nada pra instalar pelo `pip`.
 
@@ -45,8 +49,8 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
    marcada a opção *tcl/tk and IDLE* (já vem marcada).
 2. Baixe o projeto:
    ```powershell
-   git clone https://github.com/LeoMagaMoraes/clawd-desktop-pet.git
-   cd clawd-desktop-pet
+   git clone https://github.com/LeoMagaMoraes/desktop-pet.git
+   cd desktop-pet
    ```
 3. Crie o atalho **Pet** na área de trabalho:
    ```powershell
@@ -70,7 +74,7 @@ python main.py --demo --fase anciao     # demo de uma fase: ovo, filhote, clawd 
 python main.py --demo --pet fenix       # demo de outro pet (dragao, tubarao, pinguim, pato, fenix, coruja, porquinho)
 ```
 
-Só abre um Clawd por vez. Pra fechar: clique direito → **Sair**.
+Só abre um pet por vez. Pra fechar: clique direito → **Sair**.
 </details>
 
 ## 🖱️ Usar
@@ -84,6 +88,7 @@ Só abre um Clawd por vez. Pra fechar: clique direito → **Sair**.
 | **Chacoalhar** | Fica tonto, com estrelinhas, e perde um pouco de felicidade |
 | **Esfregar o mouse em cima** | Banho: tira a sujeira e solta bolhas de sabão |
 | **Soltar em outro monitor** | Passa a morar naquele monitor |
+| **Soltar em cima de uma janela** | Pousa na borda dela e passeia por lá |
 
 <table>
   <tr>
@@ -95,6 +100,20 @@ Só abre um Clawd por vez. Pra fechar: clique direito → **Sair**.
     <td align="center"><b>Status e tokens</b><br><sub>fase, XP, necessidades e o uso do Claude Code neste PC</sub></td>
   </tr>
 </table>
+
+## 🪟 Andando nas janelas
+
+Além da barra de tarefas, a **borda de cima de cada janela aberta** vira chão.
+
+- **Solte o pet em cima de uma janela** e ele pousa nela em vez de cair até a barra.
+- **De vez em quando ele pula sozinho** pra cima de uma janela que esteja ao alcance (*"Hup! 🦘"*), e de uma
+  janela pra outra.
+- **Na beirada**, ele geralmente dá meia-volta; às vezes pula pra baixo.
+- **Carona:** arraste a janela e ele vai junto.
+- Se a janela **fecha, minimiza ou outra janela tapa** o lugar onde ele está, ele cai até o próximo chão.
+- Só conta a parte da borda que está **visível**: se outra janela está na frente, ali não dá pra pisar.
+  Janelas maximizadas também não servem (não sobra espaço em cima).
+- Não gostou? Menu → **AJUSTES** → desligue **Andar nas janelas** (se ele estiver em cima de uma, ele desce).
 
 ## 🥚 Tamagotchi
 
@@ -278,8 +297,8 @@ O ícone e as imagens deste README saem da mesma pixel art: `python ferramentas/
 python -m unittest discover -s tests -t .
 ```
 
-São 203 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
-contagem de tokens, o menu, os pets, o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
+São 220 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
+contagem de tokens, o menu, os pets, as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
 do Clawd. Os que abrem janela usam uma pasta temporária no lugar do seu `~/.claude`.
 
 ## 🗂 Estrutura
@@ -312,9 +331,10 @@ pet/
   sprites.py          carrega PNGs ou o desenho provisório
   pixelart.py         toda a pixel art: os sete bichos em cada fase, roupas, efeitos, ícones
   especies.py         os pets, o jeito de cada um e a troca entre eles (progresso separado)
+  janelas.py          andar em cima das janelas: chão de cada janela, pulos, carona e quedas
   estado.py           save em pet.json
   sons.py             sonzinhos com winsound
-  tela.py             API do Windows: DPI, monitores, tempo ocioso, janela em foco
+  tela.py             API do Windows: DPI, monitores, janelas abertas, tempo ocioso, janela em foco
   config.py           todos os números ajustáveis
 assets/               ícone do programa
 docs/                 imagens deste README
@@ -333,6 +353,7 @@ O save fica em `pet.json` e os erros em `pet.log`, ambos na pasta do projeto (fo
 - [x] **Fase 4:** clima de verdade (Open-Meteo), roupinhas pelo tempo e previsão
 - [x] **Extra:** troca de pet: dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha e
   porquinho-da-índia
+- [x] **Extra:** andar em cima das janelas (pousar, pular, pegar carona)
 - [ ] **Fase 5:** loja de acessórios, fiscal do git, hora de dormir, datas especiais, música e conversa com o Claude
 
 <div align="center">

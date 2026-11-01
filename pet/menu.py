@@ -157,6 +157,7 @@ class MenuClawd:
         n = len(m.monitores)
         self._item("monitor", "Monitor", lambda: self._ir("monitor"), fecha=False,
                    direita=lambda pai: self._etiqueta(pai, f"{n} ligado{'s' if n > 1 else ''}  ›"))
+        self._chave("janela", "Andar nas janelas", m.janelas.ligado, m.janelas.alternar)
         self._item("clawd", "Claude Code", lambda: self._ir("claude"), fecha=False,
                    direita=lambda pai: self._etiqueta(pai, "›"))
         cidade = m.clima.d.get("nome_exibido") or m.clima.d.get("cidade") or ""

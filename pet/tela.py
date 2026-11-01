@@ -37,6 +37,22 @@ if WINDOWS:
                                                      ctypes.POINTER(wintypes.DWORD)]
     _kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
 
+    # Janelas abertas (pro pet andar em cima delas)
+    _WndEnumProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    _user32.EnumWindows.argtypes = [_WndEnumProc, wintypes.LPARAM]
+    _user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    _user32.IsIconic.argtypes = [wintypes.HWND]
+    _user32.IsZoomed.argtypes = [wintypes.HWND]
+    _user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    _user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    _user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    _user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+    try:
+        _dwmapi = ctypes.WinDLL("dwmapi")
+        _dwmapi.DwmGetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
+    except OSError:
+        _dwmapi = None
+
 SPI_GETWORKAREA = 0x30
 GWL_EXSTYLE = -20
 WS_EX_TOOLWINDOW = 0x80
@@ -201,6 +217,79 @@ def cantos_arredondados(janela):
                                                    ctypes.sizeof(preferencia))
     except (AttributeError, OSError):
         pass
+
+
+@dataclass(frozen=True)
+class JanelaAberta:
+    """Uma janela de outro programa: o retângulo visível (sem as bordas invisíveis do Windows)."""
+    hwnd: int
+    esquerda: int
+    topo: int
+    direita: int
+    base: int
+    titulo: str = ""
+
+
+# Classes de janela que não são "janelas de verdade" (área de trabalho, barra de tarefas...)
+CLASSES_IGNORADAS = {"Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd",
+                     "NotifyIconOverflowWindow", "Windows.UI.Core.CoreWindow", "TopLevelWindowForOverflowXamlIsland",
+                     "XamlExplorerHostIslandWindow", "SysShadow", "tooltips_class32"}
+DWMWA_EXTENDED_FRAME_BOUNDS = 9
+DWMWA_CLOAKED = 14
+
+
+def _retangulo_visivel(hwnd):
+    r = wintypes.RECT()
+    if _dwmapi is not None and _dwmapi.DwmGetWindowAttribute(
+            hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, ctypes.byref(r), ctypes.sizeof(r)) == 0:
+        return r
+    _user32.GetWindowRect(hwnd, ctypes.byref(r))
+    return r
+
+
+def _escondida_pelo_windows(hwnd):
+    """Janelas "camufladas" (apps de outra área de trabalho virtual, apps UWP fechados)."""
+    if _dwmapi is None:
+        return False
+    camuflada = ctypes.c_int(0)
+    _dwmapi.DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, ctypes.byref(camuflada), ctypes.sizeof(camuflada))
+    return camuflada.value != 0
+
+
+def janelas_visiveis(tamanho_minimo=120):
+    """Janelas abertas e visíveis dos outros programas, da mais da frente pra mais do fundo."""
+    if not WINDOWS:
+        return []
+    import os
+    meu_pid = os.getpid()
+    achadas = []
+
+    def cada(hwnd, _):
+        if not _user32.IsWindowVisible(hwnd) or _user32.IsIconic(hwnd):
+            return True
+        if _user32.GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW:
+            return True
+        pid = wintypes.DWORD()
+        _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if pid.value == meu_pid:
+            return True                     # o próprio pet, o balão, o menu...
+        classe = ctypes.create_unicode_buffer(128)
+        _user32.GetClassNameW(hwnd, classe, 128)
+        if classe.value in CLASSES_IGNORADAS or _escondida_pelo_windows(hwnd):
+            return True
+        tamanho = _user32.GetWindowTextLengthW(hwnd)
+        if tamanho == 0:
+            return True                     # janelas sem título costumam ser invisíveis/auxiliares
+        r = _retangulo_visivel(hwnd)
+        if r.right - r.left < tamanho_minimo or r.bottom - r.top < tamanho_minimo // 2:
+            return True
+        titulo = ctypes.create_unicode_buffer(tamanho + 1)
+        _user32.GetWindowTextW(hwnd, titulo, tamanho + 1)
+        achadas.append(JanelaAberta(int(hwnd), r.left, r.top, r.right, r.bottom, titulo.value))
+        return True
+
+    _user32.EnumWindows(_WndEnumProc(cada), 0)
+    return achadas
 
 
 def botao_do_mouse_apertado():

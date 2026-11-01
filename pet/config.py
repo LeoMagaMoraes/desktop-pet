@@ -65,6 +65,13 @@ TERMINAIS = {"windowsterminal.exe", "openconsole.exe", "conhost.exe", "powershel
 # Clima (Open-Meteo); a cidade fica no pet.json e troca pelo menu
 MINUTOS_CLIMA = 30           # de quanto em quanto tempo busca o clima
 
+# Janelas (andar em cima delas)
+JANELAS_MS = 250                 # de quanto em quanto tempo relê as janelas abertas
+JANELAS_EM_CIMA_MS = 60          # ...e quando ele está em cima de uma (pra seguir quando você arrasta)
+CHANCE_SUBIR_NA_JANELA = 0.15    # quando decide o que fazer, chance de pular pra cima de uma janela
+CHANCE_PULAR_DA_BEIRADA = 0.3    # chegando na beirada: pula pra baixo (senão, vira e volta)
+ALCANCE_PULO = 600               # altura máxima que ele pula (escala 4)
+
 # Rotina
 TOPMOST_MS = 3000       # de quanto em quanto tempo reforça "sempre por cima"
 AREA_MS = 5000          # de quanto em quanto tempo relê a área de trabalho

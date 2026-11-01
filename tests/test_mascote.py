@@ -34,11 +34,17 @@ class BaseMascote(unittest.TestCase):
         self.m = Mascote(arquivo_estado=arquivo)
         self.m.estado.dados["claude"]["sons"] = False      # teste sem bipe
         self.m.clima._prox_busca = float("inf")            # teste sem internet
+        self.janelas([])                                    # ...e sem as janelas abertas de verdade
         self.m.root.deiconify()
         self.m.root.update()
 
     def antes_de_criar(self):
         pass
+
+    def janelas(self, lista):
+        """Troca as janelas abertas por uma lista de mentira (e para de ler as de verdade)."""
+        self.m.janelas.atualizar = lambda forcar=False: None
+        self.m.janelas.plataformas.atualizar(lista)
 
     def tearDown(self):
         self.m.painel.fechar()

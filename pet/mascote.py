@@ -16,6 +16,7 @@ from .claude_code import ClaudeCode
 from .clima_controle import ControleClima
 from .efeitos import Efeitos
 from .estado import Estado
+from .janelas import Explorador
 from .menu import MenuClawd
 from .painel import Painel
 from .sprites import BibliotecaSprites, criar_imagens_efeito
@@ -102,6 +103,7 @@ class Mascote:
         self.tama = Tamagotchi(self)
         self.cc = ClaudeCode(self)      # eventos dos hooks e tokens
         self.clima = ControleClima(self)
+        self.janelas = Explorador(self)    # andar em cima das janelas abertas
         self.vestir(self.clima.roupas())   # já abre com a roupa do último clima conhecido
         self.painel = Painel(self)
 
@@ -187,9 +189,9 @@ class Mascote:
         self._ajustar_janela()
         self._img_atual = None
 
-    def _limites(self):
+    def _limites(self, chao=None):
         a = self.area
-        return fisica.Limites(a.esquerda, a.direita, a.topo, a.base,
+        return fisica.Limites(a.esquerda, a.direita, a.topo, a.base if chao is None else chao,
                               self.sprites.meia_largura, self.sprites.altura_corpo)
 
     def _monitor_inicial(self):
@@ -216,6 +218,7 @@ class Mascote:
         self.corpo.vx = self.corpo.vy = 0.0
         self.corpo.no_chao = False
         self.salto = self.salto_v = 0.0
+        self.janelas.soltar()
         self.arremessado = True               # pra ele comentar quando pousar
         self.mudar("caindo")
         self.falar("Mudei de monitor! 🖥️", 1.5)
@@ -307,7 +310,7 @@ class Mascote:
         elif atual.area != self.area:
             self.monitor = atual
             self.area = nova = atual.area
-            if self.acao not in ("caindo", "pendurado"):
+            if self.acao not in ("caindo", "pendurado") and self.janelas.hwnd is None:
                 self.corpo.y = nova.base
                 lim = self._limites()
                 self.corpo.x = min(max(self.corpo.x, lim.esquerda + lim.meia_largura),
@@ -338,6 +341,8 @@ class Mascote:
             return
         if self.tama.ativo and self.clima.efeitos()["dorminhoco"] and random.random() < 0.1:
             self.tama.cochilar(random.uniform(60, 150))           # chuva dá preguiça
+            return
+        if self.janelas.tentar_pular():                           # sobe numa janela
             return
         r = random.random()
         if r < 0.55:
@@ -565,6 +570,7 @@ class Mascote:
             self.falar("Ei! Eu tava dormindo!", 1.5)
         self.corpo.y -= self.salto
         self.salto = self.salto_v = 0.0
+        self.janelas.soltar()
         self.mudar("pendurado")
 
     def _soltou(self, e):
@@ -674,6 +680,7 @@ class Mascote:
             self._fim_da_acao()
 
         self.tama.tick()
+        self.janelas.tick()
         self.cc.tick()
         self.clima.tick()
         self.efeitos.atualizar(dt, self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala,
@@ -687,7 +694,15 @@ class Mascote:
         tempo = self.clima.vigente()
         if tempo and tempo.categoria == "neblina":
             velocidade *= 0.5      # na neblina vai devagarinho
-        self.corpo.x += self.direcao * velocidade * dt
+        novo_x = self.corpo.x + self.direcao * velocidade * dt
+        em_cima = self.janelas.pode_andar(novo_x + self.direcao * lim.meia_largura * 0.5)
+        if em_cima == "virar":
+            self.direcao = -self.direcao          # beirada da janela: dá meia-volta
+            return
+        self.corpo.x = novo_x
+        if em_cima == "cair":
+            self.cair()                           # pulou (ou escorregou) da janela
+            return
         # Vira quando chega na borda da tela
         if self.corpo.x - lim.meia_largura <= lim.esquerda:
             self.corpo.x = lim.esquerda + lim.meia_largura
@@ -696,8 +711,32 @@ class Mascote:
             self.corpo.x = lim.direita - lim.meia_largura
             self.direcao = -1
 
+    def cair(self):
+        """Sai do chão onde está (beirada ou janela que sumiu) e cai até o próximo."""
+        self.janelas.soltar(saindo=True)
+        self.corpo.vx = self.direcao * 60 * self.k      # um pulinho pra frente
+        self.corpo.vy = 0.0
+        self.corpo.no_chao = False
+        self.salto = self.salto_v = 0.0
+        self.mudar("caindo")
+
+    def pular(self, vx, vy):
+        """Pulo com velocidade dada (subir numa janela)."""
+        self.janelas.soltar(saindo=True)
+        self.corpo.vx, self.corpo.vy = vx, vy
+        self.corpo.no_chao = False
+        self.salto = self.salto_v = 0.0
+        self.direcao = 1 if vx >= 0 else -1
+        self.arremessado = False
+        self.mudar("caindo")
+        if random.random() < 0.3 and not self.balao.visivel:
+            self.falar("Hup! 🦘", 1)
+
     def _passo_fisica(self, dt):
-        for nome, vel in fisica.passo(self.corpo, self._limites(), self.params, dt):
+        chao, _ = self.janelas.chao(self.corpo.x, self.corpo.y)    # janela embaixo dele, ou a barra
+        if self.corpo.no_chao and chao > self.corpo.y + 1:
+            self.corpo.no_chao = False      # escorregou pra fora da janela: volta a cair
+        for nome, vel in fisica.passo(self.corpo, self._limites(chao), self.params, dt):
             agora = time.perf_counter()
             if nome in ("parede", "teto") and vel > config.VEL_AI * self.k and agora - self._ultimo_ai > 1:
                 self._ultimo_ai = agora
@@ -709,6 +748,7 @@ class Mascote:
                 break
 
     def _pousou(self):
+        self.janelas.pousou(self.corpo.x, self.corpo.y)
         if not self.demo:
             # Lugar favorito: onde foi solto por último
             self.estado.dados["lugar_favorito"] = {"x": round(self.corpo.x), "y": round(self.corpo.y)}
