@@ -221,6 +221,65 @@ class TestNaTela(BaseMascote):
         self.esperar(lambda: any(m.canvas.itemcget(pt.item, "image") == str(m.imagens_efeito["feno"])
                                  for pt in m.efeitos.particulas))
 
+    def test_coala_comeca_na_bolsinha(self):
+        m = self.m
+        m.trocar_pet("coala")
+        self.assertEqual(m.fase, "ovo")
+        self.assertIn("bolsinha", m.balao.texto)
+        m.mudar("parado", 10)
+        m.tama.ganhar_xp(100)
+        self.rodar_ticks(3.3)
+        self.assertIn("Saí da bolsinha", m.balao.texto)
+
+    def test_coala_dorminhoco(self):
+        e = especies.ajustar_efeitos("coala", clima.efeitos_nos_status(None), None)
+        self.assertTrue(e["dorminhoco"])
+        self.assertGreater(e["mult_energia"], 1)
+        self.assertFalse(especies.ajustar_efeitos("clawd", clima.efeitos_nos_status(None), None)["dorminhoco"])
+        # Cochila com 30 de energia (os outros só com 15)
+        m = self.trocar("coala")
+        m.estado.status["energia"] = 25
+        m.tama._sono(time.time())
+        self.assertEqual(m.acao, "dormindo")
+
+    def test_coala_adora_colo(self):
+        m = self.trocar("coala")
+        m.estado.status["felicidade"] = 50
+        x, y = m.corpo.x, m.corpo.y - 20
+        self.evento("<ButtonPress-1>", x, y)
+        self.evento("<Motion>", x, y - 30, state=0x100)
+        self.assertEqual(m.acao, "pendurado")
+        self.assertIn("Abraço", m.balao.texto)
+        self.assertEqual(m.estado.status["felicidade"], 52)
+
+    def test_coala_sobe_mais_nas_janelas(self):
+        from unittest import mock
+        from pet.tela import JanelaAberta
+        m = self.trocar("coala")
+        a = m.area
+        self.janelas([JanelaAberta(5, a.esquerda + 300, a.base - 300, a.esquerda + 1000, a.base - 50, "j")])
+        m.corpo.x = a.esquerda + 150
+        # 0.3 não passa na chance normal (0.15), mas passa na do coala (0.375)
+        with mock.patch("pet.janelas.random.random", return_value=0.3):
+            self.assertTrue(m.janelas.tentar_pular())
+        m.mudar("parado", 10)                    # no ar não dá pra trocar de pet: pousa antes
+        m.trocar_pet("clawd")
+        self.assertEqual(m.especie, "clawd")
+        m.mudar("parado", 10)
+        with mock.patch("pet.janelas.random.random", return_value=0.3):
+            self.assertFalse(m.janelas.tentar_pular())
+
+    def test_coala_espirra_folha_e_come_eucalipto(self):
+        m = self.trocar("coala")
+        m.estado.status["fome"] = 40
+        m.alimentar()
+        self.assertIn("eucalipto", m.balao.texto)
+        m.mudar("parado", 10)
+        m.espirrar()
+        self.assertIn("🌿", m.balao.texto)
+        self.esperar(lambda: any(m.canvas.itemcget(pt.item, "image") == str(m.imagens_efeito["folha"])
+                                 for pt in m.efeitos.particulas))
+
     def test_menu_lista_todos(self):
         self.abrir_menu()
         self.clicar_no_menu("Trocar de pet")

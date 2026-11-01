@@ -9,7 +9,7 @@ import math
 import random
 import time
 
-from . import config, tela
+from . import config, especies, tela
 
 
 class Plataformas:
@@ -173,7 +173,10 @@ class Explorador:
 
     def tentar_pular(self):
         """De vez em quando pula pra cima de uma janela. Devolve True se pulou."""
-        if not self.ligado or random.random() >= config.CHANCE_SUBIR_NA_JANELA:
+        chance = config.CHANCE_SUBIR_NA_JANELA
+        if especies.especie(self.m.especie).escalador:
+            chance *= 2.5                                 # coala vive subindo nas coisas
+        if not self.ligado or random.random() >= chance:
             return False
         m = self.m
         area, altura = self._medidas()

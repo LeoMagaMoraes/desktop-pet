@@ -15,7 +15,7 @@ class Especie:
     nome: str            # como ele se apresenta ("Oi, eu sou o ...")
     emoji: str
     nomes_fase: dict     # fase -> nome que aparece no menu e no painel
-    espirro: str         # efeito do espirro: "gota", "fogo", "bolha", "floco", "pena" ou "feno"
+    espirro: str         # efeito do espirro: "gota", "fogo", "bolha", "floco", "pena", "feno" ou "folha"
     icone: str           # ícone do menu (pixelart.ICONES)
     artigo: str = "o"    # "o Clawd", "a Fênix"
     # Personalidade (tudo opcional)
@@ -29,6 +29,9 @@ class Especie:
     som_comida: str = None          # som quando ganha comida ou um prompt
     popcorn: bool = False           # porquinho-da-índia: dá pulinhos de alegria no carinho quando tá feliz
     comilao: bool = False           # fome cai mais rápido, mas comer alegra mais
+    dorminhoco: bool = False        # coala: cansa mais, cochila mais e dorme mais cedo
+    escalador: bool = False         # coala: sobe nas janelas bem mais vezes
+    gosta_de_colo: bool = False     # coala: ser pego no mouse vira abraço (e alegra)
 
     @property
     def apresentacao(self):
@@ -74,6 +77,15 @@ ESPECIES = {
                                  "ovo": "Um ninho de feno! 🌾\nFaz carinho pra ele sair",
                                  "nasci": "Saí do ninho! 🌾\nOi, eu sou o Porquinho-da-índia! 🐹",
                                  "popcorn": "Pop! Pop! 🍿"}),
+    "coala": Especie("coala", "Coala", "🐨",
+                     {"ovo": "Bolsinha", "filhote": "Filhote de coala", "clawd": "Coala", "anciao": "Coala ancião"},
+                     espirro="folha", icone="coala", dorminhoco=True, escalador=True, gosta_de_colo=True,
+                     frases={"comida": "Nham... eucalipto! 🌿",
+                             "prompt": "🌿 Prompt novo! Eucalipto fresquinho!",
+                             "ovo": "Um filhote na bolsinha! 👜\nFaz carinho pra ele sair",
+                             "nasci": "Saí da bolsinha! \nOi, eu sou o Coala! 🐨",
+                             "clique": "Zzz... ah, oi! 🐨",
+                             "colo": "Abraço! 🤗"}),
 }
 PADRAO = "clawd"
 
@@ -148,6 +160,9 @@ def ajustar_efeitos(id_, efeitos, c):
     e = dict(efeitos)
     if esp.comilao:
         e["mult_fome"] *= 1.3                    # porquinho-da-índia vive com fome
+    if esp.dorminhoco:
+        e["dorminhoco"] = True                   # coala dorme quase o dia todo
+        e["mult_energia"] *= 1.25
     if c is None:
         return e
     if esp.gosta_de_frio:

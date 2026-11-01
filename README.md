@@ -9,7 +9,7 @@
 **O Clawd, o caranguejinho do Claude Code, e a turma dele morando na sua barra de tarefas
 (e passeando em cima das suas janelas).**
 
-<img src="docs/turma.png" width="620" alt="Clawd, dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha e porquinho-da-índia">
+<img src="docs/turma.png" width="620" alt="Clawd, dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha, porquinho-da-índia e coala">
 
 Um tamagotchi de desktop que come os seus prompts, comemora quando a task termina,
 cai duro quando os testes quebram e acena quando o Claude precisa de você.
@@ -17,7 +17,7 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dependências](https://img.shields.io/badge/depend%C3%AAncias-nenhuma-7BC67B)
-![Testes](https://img.shields.io/badge/testes-220%20passando-7BC67B)
+![Testes](https://img.shields.io/badge/testes-225%20passando-7BC67B)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-hooks-D97757)
 
 [Instalar](#-instalar) · [Usar](#-usar) · [Janelas](#-andando-nas-janelas) · [Tamagotchi](#-tamagotchi) · [Pets](#-pets) · [Clima](#-clima) · [Claude Code](#-integração-com-o-claude-code) · [Sprites](#-sprites-próprios) · [Estrutura](#-estrutura)
@@ -38,8 +38,8 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 - 📊 **Conta tokens:** da sessão, da task e dos últimos 7 dias, com meta semanal.
 - 🌦️ **Sente o tempo lá fora:** se veste conforme o clima de verdade da sua cidade, se esconde na trovoada e
   avisa de manhã se vai chover.
-- 🐉 **Oito pets:** Clawd, dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha e
-  porquinho-da-índia, cada um com o próprio progresso e o próprio jeito.
+- 🐉 **Nove pets:** Clawd, dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha,
+  porquinho-da-índia e coala, cada um com o próprio progresso e o próprio jeito.
 - 🖥️ **Se vira em vários monitores** e lembra onde você o deixou.
 - 🪶 **Leve:** Python puro com tkinter, sem nada pra instalar pelo `pip`.
 
@@ -71,7 +71,7 @@ python main.py                          # com terminal (mostra erros)
 pythonw pet.pyw                         # sem terminal
 python main.py --demo                   # passa por todas as animações, sem salvar nada
 python main.py --demo --fase anciao     # demo de uma fase: ovo, filhote, clawd ou anciao
-python main.py --demo --pet fenix       # demo de outro pet (dragao, tubarao, pinguim, pato, fenix, coruja, porquinho)
+python main.py --demo --pet fenix       # demo de outro pet (dragao, tubarao, pinguim, pato, fenix, coruja, porquinho, coala)
 ```
 
 Só abre um pet por vez. Pra fechar: clique direito → **Sair**.
@@ -149,7 +149,7 @@ e de 1 XP por minuto com você no PC.
 
 ## 🐉 Pets
 
-Menu → **Trocar de pet**. Além do Clawd 🦀, tem mais sete, cada um com o seu jeito:
+Menu → **Trocar de pet**. Além do Clawd 🦀, tem mais oito, cada um com o seu jeito:
 
 | Fases | Pet | Como é | Jeito |
 |---|---|---|---|
@@ -160,6 +160,7 @@ Menu → **Trocar de pet**. Além do Clawd 🦀, tem mais sete, cada um com o se
 | <img src="docs/fenix_fases.png" width="300" alt="Ovo de fênix, filhote, fênix e fênix anciã"> | **Fênix** 🔥 | Vermelha com peito dourado, asas, crista e cauda de fogo | **Renasce:** se a felicidade zerar, vira cinzas, volta pro ovo e renasce na hora, sem perder o XP. Espirra faísca |
 | <img src="docs/coruja_fases.png" width="300" alt="Ovo de coruja, filhote, coruja e coruja anciã"> | **Corujinha** 🦉 | Marrom, discos claros nos olhos, orelhinhas de pena e peito pintadinho | **Noturna:** de dia cochila de pijama e cansa rápido; de noite fica esperta, alegre e gasta pouca energia. Espirra pena 🪶 |
 | <img src="docs/porquinho_fases.png" width="300" alt="Ninho de feno, filhote, porquinho-da-índia e porquinho ancião"> | **Porquinho-da-índia** 🐹 | Pelo tricolor (caramelo, mancha marrom e branco), orelhinhas redondas, nariz e pezinhos rosa | Não sai de ovo: começa num **ninho de feno** 🌾. **Wheek wheek!** quando ganha comida ou um prompt. Feliz, dá **pulinhos de alegria** (popcorning) no carinho. **Comilão:** a fome cai mais rápido, mas comer alegra bem mais. Espirra feno |
+| <img src="docs/coala_fases.png" width="300" alt="Bolsinha, filhote, coala e coala ancião"> | **Coala** 🐨 | Cinza, orelhonas redondas e peludas, narizão escuro e queixo clarinho | Marsupial: começa **na bolsinha** 👜. **Dorminhoco:** cansa mais, cochila bem mais e dorme mais cedo. **Escalador:** sobe nas janelas bem mais vezes. **Gosta de colo:** pegar ele no mouse vira abraço (e alegra). Come eucalipto e espirra folhinha 🌿 |
 
 <details>
 <summary>Ver as poses de cada um</summary>
@@ -170,7 +171,8 @@ Menu → **Trocar de pet**. Além do Clawd 🦀, tem mais sete, cada um com o se
   <img src="docs/pato_poses.png" width="420" alt="Patinho de borracha em várias poses"><br>
   <img src="docs/fenix_poses.png" width="420" alt="Fênix em várias poses"><br>
   <img src="docs/coruja_poses.png" width="420" alt="Corujinha em várias poses"><br>
-  <img src="docs/porquinho_poses.png" width="420" alt="Porquinho-da-índia em várias poses">
+  <img src="docs/porquinho_poses.png" width="420" alt="Porquinho-da-índia em várias poses"><br>
+  <img src="docs/coala_poses.png" width="420" alt="Coala em várias poses">
 </p>
 </details>
 
@@ -179,7 +181,7 @@ Menu → **Trocar de pet**. Além do Clawd 🦀, tem mais sete, cada um com o se
 - **Cada pet tem o próprio progresso.** Da primeira vez o pet novo chega como ovo; o anterior fica guardado com
   o XP, a fase e as necessidades dele, **pausado**, e volta igualzinho quando você troca de novo.
 - Clima, Claude Code, monitor e as opções do menu são os mesmos pra todos.
-- Pra ver sem trocar: `python main.py --demo --pet coruja` (ou `dragao`, `tubarao`, `pinguim`, `pato`, `fenix`, `porquinho`;
+- Pra ver sem trocar: `python main.py --demo --pet coruja` (ou `dragao`, `tubarao`, `pinguim`, `pato`, `fenix`, `porquinho`, `coala`;
   dá pra juntar com `--fase`).
 - Novos bichos entram em `pet/especies.py` (nome, fases e jeito) e `pet/pixelart.py` (pele, proporções e
   detalhes como asas e cauda); as poses e as roupas são reaproveitadas.
@@ -297,7 +299,7 @@ O ícone e as imagens deste README saem da mesma pixel art: `python ferramentas/
 python -m unittest discover -s tests -t .
 ```
 
-São 220 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
+São 225 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
 contagem de tokens, o menu, os pets, as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
 do Clawd. Os que abrem janela usam uma pasta temporária no lugar do seu `~/.claude`.
 
@@ -329,7 +331,7 @@ pet/
   fisica.py           gravidade, arremesso e quiques (sem Tk)
   interacao.py        clique x arrasto, velocidade do arremesso, sacudida (sem Tk)
   sprites.py          carrega PNGs ou o desenho provisório
-  pixelart.py         toda a pixel art: os sete bichos em cada fase, roupas, efeitos, ícones
+  pixelart.py         toda a pixel art: todos os bichos em cada fase, roupas, efeitos, ícones
   especies.py         os pets, o jeito de cada um e a troca entre eles (progresso separado)
   janelas.py          andar em cima das janelas: chão de cada janela, pulos, carona e quedas
   estado.py           save em pet.json
@@ -351,8 +353,8 @@ O save fica em `pet.json` e os erros em `pet.log`, ambos na pasta do projeto (fo
 - [x] **Fase 2:** necessidades, tempo offline, avisos, gripe, banho e evolução
 - [x] **Fase 3:** hooks do Claude Code, contador de tokens e meta semanal
 - [x] **Fase 4:** clima de verdade (Open-Meteo), roupinhas pelo tempo e previsão
-- [x] **Extra:** troca de pet: dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha e
-  porquinho-da-índia
+- [x] **Extra:** troca de pet: dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha,
+  porquinho-da-índia e coala
 - [x] **Extra:** andar em cima das janelas (pousar, pular, pegar carona)
 - [ ] **Fase 5:** loja de acessórios, fiscal do git, hora de dormir, datas especiais, música e conversa com o Claude
 

@@ -55,6 +55,7 @@ class Mascote:
         self._renascendo = False        # fênix voltando das cinzas
         self._renasceu_em = 0.0
         self._ultimo_som_clique = 0.0
+        self._ultimo_colo = 0.0
         self._bibliotecas = {}
         self.roupas = frozenset()       # roupas do clima que ele está usando
         self.sprites = self._biblioteca(self.fase)
@@ -339,8 +340,9 @@ class Mascote:
         if self.cc.empanturrado and random.random() < 0.4:
             self.mudar("empanturrado", random.uniform(3, 6))   # cheio de tokens, fica molenga
             return
-        if self.tama.ativo and self.clima.efeitos()["dorminhoco"] and random.random() < 0.1:
-            self.tama.cochilar(random.uniform(60, 150))           # chuva dá preguiça
+        chance_cochilo = 0.25 if especies.especie(self.especie).dorminhoco else 0.1
+        if self.tama.ativo and self.clima.efeitos()["dorminhoco"] and random.random() < chance_cochilo:
+            self.tama.cochilar(random.uniform(60, 150))           # chuva (ou ser coala) dá preguiça
             return
         if self.janelas.tentar_pular():                           # sobe numa janela
             return
@@ -433,7 +435,8 @@ class Mascote:
     def espirrar(self):
         tipo = especies.especie(self.especie).espirro     # dragão espirra faísca, tubarão bolhas
         self.mudar("espirrando", 1.2)
-        self.falar("Atchim! " + {"fogo": "🔥", "bolha": "💦", "floco": "❄", "pena": "🪶", "feno": "🌾"}.get(tipo, "🤧"), 1.2)
+        self.falar("Atchim! " + {"fogo": "🔥", "bolha": "💦", "floco": "❄", "pena": "🪶", "feno": "🌾",
+                                 "folha": "🌿"}.get(tipo, "🤧"), 1.2)
         self.root.after(300, lambda: self.efeitos.gotas(
             self.larg_janela / 2 + 4 * self.escala * self.direcao,
             self.alt_janela - self.sprites.altura_corpo / 2, self.direcao, tipo))
@@ -572,6 +575,12 @@ class Mascote:
         self.salto = self.salto_v = 0.0
         self.janelas.soltar()
         self.mudar("pendurado")
+        esp = especies.especie(self.especie)
+        agora = time.perf_counter()
+        if esp.gosta_de_colo and agora - self._ultimo_colo > 10:
+            self._ultimo_colo = agora                 # coala adora colo: vira abraço
+            self._ajustar("felicidade", 2)
+            self.falar(esp.frases.get("colo", "Abraço! 🤗"), 1.5)
 
     def _soltou(self, e):
         if self.apertado_em is None:

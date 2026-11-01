@@ -684,6 +684,50 @@ def _porquinho_frente(g, f, t, base, dx, pose):
 _CORES_OVO_PORQUINHO = {"C": FENO, "S": "#C9AE5B", "L": "#A88A3D"}
 
 
+# --- coala ---------------------------------------------------------------------
+
+COALA = "#9AA3AB"
+COALA_SOMBRA = "#7A838C"
+COALA_CLARO = "#E8E3DC"
+NARIZ_COALA = "#3A3A40"
+
+PELE_COALA = Pele(COALA, COALA_SOMBRA)
+COALA_ADULTO = Forma(x0=5, topo=6, altura=8, pernas_x=(7,), olho_x=7, olho_dy=2,
+                     braco_dy=4, boca_dy=6, dy_dormindo=1, pernas_largura=2)
+COALA_FILHOTE = Forma(x0=7, topo=9, altura=5, pernas_x=(8,), olho_x=8, olho_dy=1,
+                      braco_dy=2, boca_dy=3, dy_dormindo=1, pernas_largura=2)
+
+
+def _coala_frente(g, f, t, base, dx, pose):
+    """Orelhonas redondas (clarinhas por dentro), narizão escuro e queixo/barriga claros."""
+    pequeno = f.altura < 8
+    centro = LARGURA // 2
+    ey = t + f.olho_dy
+    # Queixo e barriga clarinhos
+    g.retangulo(f.x0 + 2 + dx, t + f.boca_dy, _espelho(f.x0 + 2) + dx, base - 1, COALA_CLARO)
+    # Narizão: mais largo em cima, afinando embaixo
+    if pequeno:
+        g.retangulo(centro - 1 + dx, ey + 1, centro + dx, ey + 2, NARIZ_COALA)
+    else:
+        g.retangulo(centro - 2 + dx, ey + 1, centro + 1 + dx, ey + 2, NARIZ_COALA)
+        g.retangulo(centro - 1 + dx, ey + 3, centro + dx, ey + 3, NARIZ_COALA)
+    # Orelhonas nos cantos de cima, saindo pra fora da cabeça
+    tamanho = 3 if pequeno else 4
+    for lado in (-1, 1):
+        for oy in range(tamanho):
+            for ox in range(tamanho):
+                canto = oy == 0 and ox in (0, tamanho - 1)       # cantinho arredondado
+                if canto:
+                    continue
+                x = f.x0 - 2 + ox if lado < 0 else _espelho(f.x0 - 2 + ox)
+                dentro = 0 < ox < tamanho - 1 and 0 < oy < tamanho - 1 or (pequeno and ox == 1 and oy == 1)
+                g.ponto(x + dx, t - tamanho + 1 + oy, COALA_CLARO if dentro else COALA)
+
+
+# Coala é marsupial: começa na bolsinha da mamãe
+_CORES_OVO_COALA = {"C": "#A89580", "S": "#7E6D5A", "L": "#C9B8A3"}
+
+
 # Como desenhar cada bicho: proporções do filhote e do adulto, estilo e cores do ovo
 BICHOS = {
     "clawd": {"filhote": FILHOTE, "adulto": ADULTO, "estilo": {}, "ovo": _CORES_OVO},
@@ -704,6 +748,8 @@ BICHOS = {
                "estilo": {"pele": PELE_CORUJA, "frente": _coruja_frente}, "ovo": _CORES_OVO_CORUJA},
     "porquinho": {"filhote": PORQUINHO_FILHOTE, "adulto": PORQUINHO_ADULTO,
                   "estilo": {"pele": PELE_PORQUINHO, "frente": _porquinho_frente}, "ovo": _CORES_OVO_PORQUINHO},
+    "coala": {"filhote": COALA_FILHOTE, "adulto": COALA_ADULTO,
+              "estilo": {"pele": PELE_COALA, "frente": _coala_frente}, "ovo": _CORES_OVO_COALA},
 }
 
 
@@ -818,7 +864,7 @@ ANIMACOES = animacoes("clawd")
 # Efeitos que flutuam em volta dele
 _CORES_EFEITO = {"R": "#E8455A", "W": BRANCO, "Y": "#FFD34D", "Z": "#8FB4FF", "M": "#E8B26A",
                  "K": "#2A2A2A", "G": "#C9D6E3", "B": "#BFE6FF", "A": "#7CC4F2", "D": "#5A606A",
-                 "F": "#F28C28", "H": "#E8D28A"}
+                 "F": "#F28C28", "H": "#E8D28A", "E": "#6BBF59"}
 EFEITOS = {
     "coracao": de_texto([".RR.RR.",
                          "RWRRRRR",
@@ -851,6 +897,9 @@ EFEITOS = {
     "floco": de_texto(["W.W",
                        ".W.",
                        "W.W"], _CORES_EFEITO),
+    "folha": de_texto(["..E",
+                       ".EE",
+                       "E.."], _CORES_EFEITO),
     "feno": de_texto(["..H",
                       ".H.",
                       "H.."], _CORES_EFEITO),
@@ -887,7 +936,8 @@ _CORES_ICONE = {"K": PRETO, "W": BRANCO, "O": LARANJA, "S": SOMBRA, "Y": "#FFD34
                 "E": CASCA, "V": VERDE, "Q": VERDE_SOMBRA, "H": CHIFRE, "N": BARRIGA,
                 "T": AZUL_TUBARAO, "U": AZUL_TUBARAO_SOMBRA, "X": BARRIGA_TUBARAO,
                 "P": PINGUIM, "A": BICO_PATO, "F": FENIX, "L": CHAMA, "Z": CORUJA, "J": DISCO,
-                "I": PORQUINHO, "#": PELO_ESCURO, "%": NARIZ_ROSA}
+                "I": PORQUINHO, "#": PELO_ESCURO, "%": NARIZ_ROSA,
+                "q": COALA, "w": COALA_CLARO, "n": NARIZ_COALA}
 ICONES = {
     "comida": de_texto(["....MMM.",
                         "...MMMMM",
@@ -1011,6 +1061,13 @@ ICONES = {
                            ".IIWWWWII.",
                            "..IIIIII..",
                            "..%%..%%.."], _CORES_ICONE),
+    "coala": de_texto(["qqq....qqq",
+                       "qwqqqqqqwq",
+                       ".qqKqqKqq.",
+                       ".qqqnnqqq.",
+                       ".qqqnnqqq.",
+                       "..qwwwwq..",
+                       "..qq..qq.."], _CORES_ICONE),
     "ovo": de_texto(["..EEEE..",
                      ".EEEEEE.",
                      ".EEOEEE.",
