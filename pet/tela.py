@@ -324,10 +324,12 @@ def botao_do_mouse_apertado():
 
 
 def instancia_unica(nome):
-    """Cria um mutex com nome; devolve None se outro Clawd já estiver rodando."""
+    """Cria um mutex com nome; devolve None se outro pet já estiver rodando."""
     if not WINDOWS:
         return True
     handle = _kernel32.CreateMutexW(None, False, nome)
     if ctypes.get_last_error() == ERROR_ALREADY_EXISTS:
+        # Solta o nosso handle: senão o mutex continua existindo mesmo depois que o outro fechar
+        _kernel32.CloseHandle(handle)
         return None
     return handle

@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import time
 
 from pet import config, especies, tela, tokens
 
@@ -29,14 +30,23 @@ def main():
     parser.add_argument("--fase", choices=("ovo", "filhote", "clawd", "anciao"),
                         help="na demo, mostra essa fase de evolução")
     parser.add_argument("--pet", choices=sorted(especies.ESPECIES), help="na demo, mostra esse pet")
+    parser.add_argument("--reiniciando", action="store_true",
+                        help="aberto pelo próprio pet depois de atualizar: espera o antigo fechar")
     args = parser.parse_args()
 
     migrar_nomes_antigos()
     logging.basicConfig(filename=config.ARQUIVO_LOG, encoding="utf-8", level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-    # Só um pet por vez (a variável precisa viver até o fim pro mutex não fechar)
-    trava = tela.instancia_unica("Local\\PetDeDesktop")
+    # Só um pet por vez (a variável precisa viver até o fim pro mutex não fechar).
+    # Reiniciando depois de atualizar, o antigo ainda está fechando: tenta por uns segundos.
+    tentativas = 50 if args.reiniciando else 1
+    trava = None
+    for i in range(tentativas):
+        trava = tela.instancia_unica("Local\\PetDeDesktop")
+        if trava is not None:
+            break
+        time.sleep(0.3)
     if trava is None:
         print("O pet já está rodando.")
         return

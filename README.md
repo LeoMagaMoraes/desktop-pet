@@ -17,7 +17,7 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dependências](https://img.shields.io/badge/depend%C3%AAncias-nenhuma-7BC67B)
-![Testes](https://img.shields.io/badge/testes-299%20passando-7BC67B)
+![Testes](https://img.shields.io/badge/testes-318%20passando-7BC67B)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-hooks-D97757)
 
 [Instalar](#-instalar) · [Usar](#-usar) · [Janelas](#-andando-nas-janelas) · [Tamagotchi](#-tamagotchi) · [Pets](#-pets) · [Clima](#-clima) · [Claude Code](#-integração-com-o-claude-code) · [Sprites](#-sprites-próprios) · [Estrutura](#-estrutura)
@@ -67,6 +67,17 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
    ```
 
 Pronto: dois cliques no atalho **Pet** e ele aparece em cima da barra de tarefas.
+
+### 🆕 Atualizações
+
+Na primeira vez que ele abre no dia, olha no GitHub se saiu versão nova. Tendo, ele avisa
+(*"Saiu versão nova do P.E.T.!"*) e aparece **Atualizar o P.E.T.** no fim do menu, com a lista do que mudou:
+confirmando, ele baixa, instala e reinicia sozinho, e conta a novidade quando volta. Dá pra procurar na hora em
+**Procurar atualização**.
+
+- Funciona com o projeto baixado pelo `git clone` (o passo 2 acima) e precisa do git instalado.
+- Ele só avança pra versão nova, nunca mistura nada: se você mexeu nos arquivos do pet ou tem commit seu que
+  não está no GitHub, ele avisa e pede pra atualizar pelo git. O save (`pet.json`) fica fora do git e não muda.
 
 <details>
 <summary>Outras formas de abrir</summary>
@@ -376,8 +387,8 @@ O ícone e as imagens deste README saem da mesma pixel art: `python ferramentas/
 python -m unittest discover -s tests -t .
 ```
 
-São 299 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
-contagem de tokens, o menu, os pets, os lembretes (que entendem "amanhã 9h"), as datas especiais, a loja, o fiscal do git (com repositórios de mentira), a bola, as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
+São 318 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
+contagem de tokens, o menu, os pets, os lembretes (que entendem "amanhã 9h"), as datas especiais, a loja, o fiscal do git (com repositórios de mentira), a bola, a atualização (com um "GitHub" de mentira), as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
 do Clawd. Os que abrem janela usam uma pasta temporária no lugar do seu `~/.claude`.
 
 ## 🗂 Estrutura
@@ -421,6 +432,7 @@ pet/
   musica.py           medidor de volume do Windows pelo ctypes, fone e dancinha
   loja.py             acessórios comprados com XP
   bola.py             a bola (janela própria com a física do pet) e o jogo de chutar
+  atualizacao.py      versão nova no GitHub: avisa, baixa (git fetch), instala e reinicia
   estado.py           save em pet.json
   sons.py             sonzinhos com winsound
   tela.py             API do Windows: DPI, monitores, janelas abertas, tempo ocioso, janela em foco
@@ -444,6 +456,7 @@ O save fica em `pet.json` e os erros em `pet.log`, ambos na pasta do projeto (fo
   porquinho-da-índia e coala
 - [x] **Extra:** andar em cima das janelas (pousar, pular, pegar carona)
 - [x] **Extra:** brincar de bola e a Fênix anciã renascendo como ovo
+- [x] **Extra:** atualização automática (avisa uma vez por dia, instala e reinicia)
 - [x] **Fase 5:** lembretes, datas especiais, hora de dormir, tela cheia, fiscal do git, resumo do dia, música e loja
 - [ ] **Depois:** conversar com o pet pela API do Claude (duplo clique)
 

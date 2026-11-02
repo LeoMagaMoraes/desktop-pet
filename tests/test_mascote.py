@@ -42,6 +42,7 @@ class BaseMascote(unittest.TestCase):
         self.m.datas.atual = None
         self.m.atualizar_roupas()
         self.m.fiscal._prox = float("inf")
+        self.m.atualizacao._prox = float("inf")             # ...e sem ir no GitHub
         self.m.root.deiconify()
         self.m.root.update()
 

@@ -1301,6 +1301,14 @@ ICONES = {
                          "RWWKKKWR",
                          ".RWWWWR.",
                          "R.RRRR.R"], _CORES_ICONE),
+    "baixar": de_texto(["...GG...",            # setinha entrando na bandeja (atualizar)
+                        "...GG...",
+                        "...GG...",
+                        ".GGGGGG.",
+                        "..GGGG..",
+                        "...GG...",
+                        "W......W",
+                        "WWWWWWWW"], _CORES_ICONE),
     "lista": de_texto(["..DDDD..",             # prancheta com linhas (resumo, fiscal)
                        ".WWWWWW.",
                        ".WKKKKW.",

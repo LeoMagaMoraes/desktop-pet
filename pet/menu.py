@@ -191,6 +191,15 @@ class MenuClawd:
         self._chave("ovo", "Modo Tamagotchi", ligado, lambda: m.tama.mudar_modo(not ligado))
 
         self._separador()
+        at = m.atualizacao
+        if at.tem_novidade:
+            n = at.situacao.get("novidades", 0)
+            self._item("baixar", "Atualizar o P.E.T.", at.atualizar, negrito=True, destaque_cor="#2E4A2E",
+                       direita=lambda pai: self._etiqueta(pai, f"{n} novidade{'s' if n > 1 else ''}", VERDE))
+        else:
+            rotulo = at.rotulo()
+            self._item("baixar", "Procurar atualização", at.procurar_agora,
+                       direita=(lambda pai: self._etiqueta(pai, rotulo)) if rotulo else None)
         self._item("porta", "Sair", m.sair, destaque_cor="#5A2E2E")
 
     def _pagina_monitor(self):

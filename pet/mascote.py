@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog
 
 from . import config, especies, fisica, interacao, necessidades, sons, tela, tokens
+from .atualizacao import Atualizacao
 from .balao import Balao
 from .bola import Brincadeira
 from .claude_code import ClaudeCode
@@ -124,6 +125,7 @@ class Mascote:
         self.resumo = ResumoDoDia(self)
         self.musica = Musica(self)         # fone e dancinha com som tocando
         self.loja = Loja(self)
+        self.atualizacao = Atualizacao(self)   # versão nova no GitHub
         self.atualizar_roupas()            # já abre com a roupa do último clima conhecido
         self.painel = Painel(self)
         self.dialogo_lembrete = DialogoLembrete(self)
@@ -304,7 +306,7 @@ class Mascote:
             self.mudar("caindo")
         else:
             self.mudar("acenando", 2.5)
-            self.falar(self.tama.boas_vindas() or "Oi! 👋")
+            self.falar(self.atualizacao.boas_vindas() or self.tama.boas_vindas() or "Oi! 👋")
 
         signal.signal(signal.SIGINT, lambda *_: self.root.after_idle(self.sair))
         self.root.after(config.TICK_MS, self._tick)
@@ -803,6 +805,7 @@ class Mascote:
         self.fiscal.tick()
         self.resumo.tick()
         self.musica.tick()
+        self.atualizacao.tick()
         self.efeitos.atualizar(dt, self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala,
                                self.alt_janela - self.sprites.altura_corpo / 2)
 

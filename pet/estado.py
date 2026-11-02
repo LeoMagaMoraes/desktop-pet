@@ -42,6 +42,10 @@ PADRAO = {
         "resumo_auto": True,         # resumo do dia às 18h
         "resumo_mostrado": None,     # dia em que o resumo automático já apareceu
     },
+    "atualizacao": {
+        "ultima_checagem": None,     # dia em que já olhou se tem versão nova no GitHub
+        "acabou_de_atualizar": None, # títulos das novidades, pra contar depois de reiniciar
+    },
     "hoje": None,                    # contadores do resumo do dia (carinhos, minutos no PC...)
     "clima": {
         "cidade": "Florianópolis",
