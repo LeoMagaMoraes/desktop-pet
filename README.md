@@ -17,7 +17,7 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dependências](https://img.shields.io/badge/depend%C3%AAncias-nenhuma-7BC67B)
-![Testes](https://img.shields.io/badge/testes-282%20passando-7BC67B)
+![Testes](https://img.shields.io/badge/testes-299%20passando-7BC67B)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-hooks-D97757)
 
 [Instalar](#-instalar) · [Usar](#-usar) · [Janelas](#-andando-nas-janelas) · [Tamagotchi](#-tamagotchi) · [Pets](#-pets) · [Clima](#-clima) · [Claude Code](#-integração-com-o-claude-code) · [Sprites](#-sprites-próprios) · [Estrutura](#-estrutura)
@@ -94,6 +94,7 @@ Só abre um pet por vez. Pra fechar: clique direito → **Sair**.
 | **Esfregar o mouse em cima** | Banho: tira a sujeira e solta bolhas de sabão |
 | **Soltar em outro monitor** | Passa a morar naquele monitor |
 | **Soltar em cima de uma janela** | Pousa na borda dela e passeia por lá |
+| **Menu → Brincar** | Cai uma bola ⚽: ele corre atrás e chuta (veja abaixo) |
 
 <table>
   <tr>
@@ -141,6 +142,18 @@ Na hora, o pet **acorda se estiver dormindo, acena sem parar** com o balão *"�
 - Ou abra o menu: aparecem **Feito!** e **Me lembra em 10 min** no topo.
 - **PC desligado na hora marcada?** Quando ele abrir, avisa assim mesmo, dizendo pra quando era.
 - A página **Lembretes** lista os próximos; clicar num deles apaga.
+
+## ⚽ Brincar de bola
+
+Menu → **CUIDAR** → **Brincar**: cai uma bola de praia do alto e o pet corre atrás dela e chuta.
+
+- A bola tem **a mesma física do pet quando você joga ele**: gravidade, quique nas bordas da tela, atrito no
+  chão e pouso em cima das janelas.
+- Ele **corre** (bem mais rápido que andando). Se a bola cai lá embaixo, ele pula da janela; se ela para em
+  cima de uma janela ao alcance, ele pula até lá. Se ficar alta demais, ele desiste (*"A bola ficou lá em cima!"*).
+- **Você também brinca:** clique na bola pra dar um toquinho, ou pegue e arremesse com o mouse.
+- Depois de uns chutes (4 a 7) ele cansa, a bola some e ele comemora. Cada chute dá XP e felicidade.
+- Lembrete tocando, o Claude chamando ou tela cheia encerram o jogo na hora.
 
 ## 🌙 Rotina, festas e música
 
@@ -215,7 +228,7 @@ Menu → **Trocar de pet**. Além do Clawd 🦀, tem mais oito, cada um com o se
 | <img src="docs/tubarao_fases.png" width="300" alt="Ovo de tubarão, filhote, tubarão e tubarão ancião"> | **Tubarãozinho** 🦈 | Azul de barriga branca, sorriso de dentinhos, barbatana, cauda em meia-lua e guelras | Nasce de uma cápsula marrom (a "bolsa de sereia", como muitos tubarões de verdade). Espirra bolhas 💦. Escondido na trovoada, só a barbatana fica de fora |
 | <img src="docs/pinguim_fases.png" width="300" alt="Ovo de pinguim, filhote, pinguim e pinguim ancião"> | **Pinguinzinho** 🐧 | Preto de rosto e barriga brancos, bico e pezinhos laranja | **Ama frio:** abaixo de 15 °C fica feliz em vez de sentir fome e dispensa o agasalho. Acima de 25 °C cansa mais e já liga o ventilador. Espirra floco de neve ❄ |
 | <img src="docs/pato_fases.png" width="300" alt="Ovo de pato, filhote, pato de borracha e pato ancião"> | **Patinho de borracha** 🦆 | Amarelo, bicão laranja e topetinho | O pato do *rubber duck debugging*: quando um comando falha, pergunta **"Já explicou o problema pra mim? Linha por linha"**. Faz quack no carinho |
-| <img src="docs/fenix_fases.png" width="300" alt="Ovo de fênix, filhote, fênix e fênix anciã"> | **Fênix** 🔥 | Vermelha com peito dourado, asas, crista e cauda de fogo | **Renasce:** se a felicidade zerar, vira cinzas, volta pro ovo e renasce na hora, sem perder o XP. Espirra faísca |
+| <img src="docs/fenix_fases.png" width="300" alt="Ovo de fênix, filhote, fênix e fênix anciã"> | **Fênix** 🔥 | Vermelha com peito dourado, asas, crista e cauda de fogo | **Renasce:** se a felicidade zerar, vira cinzas, volta pro ovo e renasce na hora, sem perder o XP. Anciã (a fase máxima), ganha a opção **Renascer** no menu: volta como ovo e começa tudo de novo (o XP zera, o número de renascimentos fica). Espirra faísca |
 | <img src="docs/coruja_fases.png" width="300" alt="Ovo de coruja, filhote, coruja e coruja anciã"> | **Corujinha** 🦉 | Marrom, discos claros nos olhos, orelhinhas de pena e peito pintadinho | **Noturna:** de dia cochila de pijama e cansa rápido; de noite fica esperta, alegre e gasta pouca energia. Espirra pena 🪶 |
 | <img src="docs/porquinho_fases.png" width="300" alt="Ninho de feno, filhote, porquinho-da-índia e porquinho ancião"> | **Porquinho-da-índia** 🐹 | Pelo tricolor (caramelo, mancha marrom e branco), orelhinhas redondas, nariz e pezinhos rosa | Não sai de ovo: começa num **ninho de feno** 🌾. **Wheek wheek!** quando ganha comida ou um prompt. Feliz, dá **pulinhos de alegria** (popcorning) no carinho. **Comilão:** a fome cai mais rápido, mas comer alegra bem mais. Espirra feno |
 | <img src="docs/coala_fases.png" width="300" alt="Bolsinha, filhote, coala e coala ancião"> | **Coala** 🐨 | Cinza, orelhonas redondas e peludas, narizão escuro e queixo clarinho | Marsupial: começa **na bolsinha** 👜. **Dorminhoco:** cansa mais, cochila bem mais e dorme mais cedo. **Escalador:** sobe nas janelas bem mais vezes. **Gosta de colo:** pegar ele no mouse vira abraço (e alegra). Come eucalipto e espirra folhinha 🌿 |
@@ -363,8 +376,8 @@ O ícone e as imagens deste README saem da mesma pixel art: `python ferramentas/
 python -m unittest discover -s tests -t .
 ```
 
-São 282 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
-contagem de tokens, o menu, os pets, os lembretes (que entendem "amanhã 9h"), as datas especiais, a loja, o fiscal do git (com repositórios de mentira), as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
+São 299 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
+contagem de tokens, o menu, os pets, os lembretes (que entendem "amanhã 9h"), as datas especiais, a loja, o fiscal do git (com repositórios de mentira), a bola, as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
 do Clawd. Os que abrem janela usam uma pasta temporária no lugar do seu `~/.claude`.
 
 ## 🗂 Estrutura
@@ -407,6 +420,7 @@ pet/
   resumo.py           resumo do dia (tempo no PC, tasks, tokens, carinhos)
   musica.py           medidor de volume do Windows pelo ctypes, fone e dancinha
   loja.py             acessórios comprados com XP
+  bola.py             a bola (janela própria com a física do pet) e o jogo de chutar
   estado.py           save em pet.json
   sons.py             sonzinhos com winsound
   tela.py             API do Windows: DPI, monitores, janelas abertas, tempo ocioso, janela em foco
@@ -429,6 +443,7 @@ O save fica em `pet.json` e os erros em `pet.log`, ambos na pasta do projeto (fo
 - [x] **Extra:** troca de pet: dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha,
   porquinho-da-índia e coala
 - [x] **Extra:** andar em cima das janelas (pousar, pular, pegar carona)
+- [x] **Extra:** brincar de bola e a Fênix anciã renascendo como ovo
 - [x] **Fase 5:** lembretes, datas especiais, hora de dormir, tela cheia, fiscal do git, resumo do dia, música e loja
 - [ ] **Depois:** conversar com o pet pela API do Claude (duplo clique)
 

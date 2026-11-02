@@ -16,6 +16,7 @@ PADRAO = {
     "status": {"fome": 80, "energia": 80, "felicidade": 80},   # 0 a 100, 100 = ótimo
     "xp": 0,
     "xp_gasto": 0,              # XP gasto na loja (a fase continua contando o XP total)
+    "renascimentos": 0,         # quantas vezes a Fênix anciã escolheu renascer
     "fase": "ovo",
     "acessorios": {"comprados": [], "equipados": {}},   # da loja; equipados: lugar -> item
     "sujeira": 0,               # 0 = limpinho, 100 = cheio de mosquinha

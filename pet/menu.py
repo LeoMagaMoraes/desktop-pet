@@ -151,6 +151,10 @@ class MenuClawd:
             self._item("sol", "Acordar", lambda: m.acordar("Bom dia! ☀️"))
         else:
             self._item("lua", "Dormir", m.dormir, direita=barra(s["energia"]))
+        if m.pode_renascer():
+            vezes = m.estado.dados.get("renascimentos", 0)
+            self._item("fenix", "Renascer", m.renascer_de_vontade, destaque_cor="#5A2E2E",
+                       direita=lambda pai: self._etiqueta(pai, f"🔥 {vezes}x" if vezes else "fase máxima", LARANJA))
         if ativo and m.estado.dados["doente"]:
             self._item("pilula", "Dar remédio", m.dar_remedio, destaque_cor=VERMELHO,
                        direita=lambda pai: self._etiqueta(pai, "gripado", VERMELHO))

@@ -90,8 +90,9 @@ ESPECIES = {
 PADRAO = "clawd"
 
 # O que é de cada pet (o resto do save, como clima, monitor e Claude Code, é de todos)
-CAMPOS_DO_PET = ("status", "xp", "xp_gasto", "fase", "sujeira", "doente", "horas_com_fome")
+CAMPOS_DO_PET = ("status", "xp", "xp_gasto", "fase", "sujeira", "doente", "horas_com_fome", "renascimentos")
 PET_NOVO = {"status": {"fome": 80, "energia": 80, "felicidade": 80}, "xp": 0, "xp_gasto": 0, "fase": "ovo",
+            "renascimentos": 0,
             "sujeira": 0, "doente": False, "horas_com_fome": 0.0}
 
 

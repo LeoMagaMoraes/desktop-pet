@@ -8,10 +8,11 @@ import sys
 import threading
 import time
 import tkinter as tk
-from tkinter import simpledialog
+from tkinter import messagebox, simpledialog
 
 from . import config, especies, fisica, interacao, necessidades, sons, tela, tokens
 from .balao import Balao
+from .bola import Brincadeira
 from .claude_code import ClaudeCode
 from .clima_controle import ControleClima
 from .datas import DatasEspeciais
@@ -126,6 +127,7 @@ class Mascote:
         self.atualizar_roupas()            # já abre com a roupa do último clima conhecido
         self.painel = Painel(self)
         self.dialogo_lembrete = DialogoLembrete(self)
+        self.brincadeira = Brincadeira(self)   # a bola
 
     # ------------------------------------------------------------------ montagem
 
@@ -261,6 +263,7 @@ class Mascote:
         novo = tela.monitor_por_nome(self.monitores, nome)
         if novo.nome != nome or self.acao == "pendurado":
             return
+        self.brincadeira.parar(falar=False)
         self.monitor = novo
         self.area = novo.area
         self.estado.dados["monitor"] = novo.nome
@@ -321,6 +324,7 @@ class Mascote:
         self.menu.fechar()
         self.dialogo_lembrete.fechar()
         self.musica.parar()
+        self.brincadeira.parar(falar=False)
         # Cancela os loops agendados pra não sobrar callback apontando pra janela fechada.
         # Cada um no seu try: se um falhar, o destroy ainda tem que acontecer.
         try:
@@ -393,6 +397,9 @@ class Mascote:
         if self.fase == "ovo":
             self.mudar("parado", random.uniform(3, 8))    # ovo não anda
             return
+        if self.brincadeira.ativa:
+            self.mudar("parado")                       # brincando de bola: quem decide é o jogo
+            return
         if self.cc.empanturrado and random.random() < 0.4:
             self.mudar("empanturrado", random.uniform(3, 6))   # cheio de tokens, fica molenga
             return
@@ -463,13 +470,18 @@ class Mascote:
         if self.tama.ativo and self.estado.status["energia"] < 15:
             self.falar("Tô cansadinho... 😴")
             return
-        self.mudar("comemorando", 2.6)
+        if self.acao in ("pendurado", "caindo"):
+            return
+        if self.acao == "dormindo":
+            self.tama.cochilo_ate = None                # bola acorda qualquer um
+            self.tama.acordado_em = time.time()
         self._ajustar("felicidade", 10)
         self._ajustar("energia", -5)
         self._ajustar("fome", -3)
         self.tama.ganhar_xp(config.XP_BRINCAR)
         self.resumo.contar("brincadeiras")
-        self.falar("Iupi!")
+        self.brincadeira.comecar()                      # cai uma bola e ele corre atrás
+        self.falar("Bola! ⚽", 1.5)
 
     def dormir(self, texto="Boa noite... 💤"):
         # Sem prazo: o Tamagotchi acorda ele quando a energia enche (ou um clique)
@@ -508,6 +520,7 @@ class Mascote:
         """Guarda o pet atual (pausado) e traz o outro, numa nuvenzinha de fumaça."""
         if self.acao in ("pendurado", "caindo") or not especies.trocar(self.estado.dados, novo):
             return
+        self.brincadeira.parar(falar=False)
         self.especie = novo
         self.fase = self.estado.dados["fase"]
         self._fase_pendente = None
@@ -545,6 +558,26 @@ class Mascote:
         self.mudar("parado", 2)
         self.falar("🔥 Virei cinzas...\nmas eu vou renascer!", 3)
         self.salvar()
+
+    def pode_renascer(self):
+        """Fênix anciã (a fase máxima) pode escolher renascer."""
+        return especies.especie(self.especie).renasce and self.fase == necessidades.FASES[-1][0]
+
+    def renascer_de_vontade(self):
+        """Pelo menu: a Fênix anciã vira cinzas e volta como ovo, começando tudo de novo."""
+        if not self.pode_renascer():
+            return
+        if not messagebox.askyesno(
+                "Renascer", "A Fênix vai virar cinzas e voltar como ovo.\n\n"
+                "O XP zera e ela passa por todas as fases de novo, mas conta mais um renascimento. "
+                "Os acessórios da loja continuam seus.\n\nRenascer agora?", parent=self.root):
+            return
+        d = self.estado.dados
+        d["renascimentos"] = d.get("renascimentos", 0) + 1
+        d["xp"] = 0
+        d["xp_gasto"] = 0
+        self.renascer()
+        self.falar(f"🔥 Virei cinzas...\nRenascimento nº {d['renascimentos']}!", 3.5)
 
     def bolha_em(self, x_tela, y_tela):
         """Bolha de sabão onde o mouse está esfregando."""
@@ -585,6 +618,8 @@ class Mascote:
             self.falar(f"Renasci das cinzas! {esp.emoji}✨", 4)
         elif antiga == "ovo":
             self.falar(esp.frases.get("nasci", f"Nasci! 🐣\nOi, eu sou {esp.apresentacao}! {esp.emoji}"), 4)
+        elif self.pode_renascer():
+            self.falar(f"Evoluí! Agora sou\n{esp.nomes_fase[nova]}! ✨\nCheguei no máximo: posso renascer 🔥", 5)
         else:
             self.falar(f"Evoluí! Agora sou\n{esp.nomes_fase[nova]}! ✨", 4)
         self.salvar()
@@ -733,6 +768,8 @@ class Mascote:
             self._passo_fisica(dt)
         elif a == "andando":
             self._andar(dt)
+        elif a == "correndo":
+            self._andar(dt, 3.5)                          # atrás da bola
         elif a == "comemorando" and self.salto <= 0:
             self.salto_v = config.VEL_PULO * self.k     # pula de novo assim que encosta no chão
         elif a == "dormindo" and agora >= self._prox_particula:
@@ -759,6 +796,7 @@ class Mascote:
         self.cc.tick()
         self.clima.tick()
         self.lembretes.tick()
+        self.brincadeira.tick(dt)
         self.datas.tick()
         self.hora_dormir.tick()
         self.tela_cheia.tick()
@@ -768,9 +806,9 @@ class Mascote:
         self.efeitos.atualizar(dt, self.larg_janela / 2, self._cabeca_no_canvas() - 2 * self.escala,
                                self.alt_janela - self.sprites.altura_corpo / 2)
 
-    def _andar(self, dt):
+    def _andar(self, dt, rapidez=1.0):
         lim = self._limites()
-        velocidade = config.VELOCIDADE_ANDAR * self.k
+        velocidade = config.VELOCIDADE_ANDAR * self.k * rapidez
         if self.tama.ativo and (self.estado.dados["doente"] or self.estado.status["energia"] < 30):
             velocidade *= 0.5      # cansado ou gripado anda devagar
         tempo = self.clima.vigente()

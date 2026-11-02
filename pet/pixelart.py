@@ -163,14 +163,20 @@ def criatura(olhos="aberto", braco_esq="normal", braco_dir="normal", pernas="nor
     w = f.pernas_largura
     esquerdas = list(f.pernas_x)
     direitas = [_espelho(px + w - 1) for px in reversed(esquerdas)]
-    for i, px in enumerate(esquerdas + direitas):
+    todas = esquerdas + direitas
+    for i, px in enumerate(todas):
         fim = ALTURA - 1
         if (pernas == "passoA" and i % 2 == 0) or (pernas == "passoB" and i % 2 == 1):
             fim -= 1  # perna levantada
+        chute = pernas == "chute" and i == len(todas) - 1     # a perna da frente esticada pro chute
+        if chute:
+            fim -= 1
         for y in range(base + 1, fim + 1):
             balanco = 0
             if y > base + 1:
                 balanco = {"balancoA": -1, "balancoB": 1}.get(pernas, 0)
+            if chute:
+                balanco = y - base                 # vai pra frente em diagonal
             g.retangulo(px + dx + balanco, y, px + dx + balanco + w - 1, y, pele.pernas or pele.cor)
         if "galochas" in acessorios and fim == ALTURA - 1 and base + 1 <= fim:
             # Botinha amarela nas duas últimas linhas, com a pontinha pra frente
@@ -930,6 +936,11 @@ def _animacoes_criatura(forma, acessorios, estilo):
     return {
         "parado": (300, [normal] * 9 + [c(olhos="fechado")]),
         "andando": (140, [c(pernas="passoA"), normal, c(pernas="passoB"), normal]),
+        # Brincando de bola: corre mais rápido e chuta com a perna da frente
+        "correndo": (80, [c(pernas="passoA", olhos="feliz"), c(olhos="feliz"), c(pernas="passoB", olhos="feliz"),
+                          c(olhos="feliz")]),
+        "chutando": (150, [c(pernas="chute", olhos="concentrado", braco_esq="cima"),
+                           c(pernas="chute", olhos="feliz", braco_esq="cima", bochecha=True)]),
         "dormindo": (900, [c(olhos="fechado", dy=dorme), c(olhos="fechado", dy=dorme, respira=True)]),
         "pendurado": (180, [c(braco_esq="cima", braco_dir="cima", pernas="balancoA"),
                             c(braco_esq="cima", braco_dir="cima", pernas="balancoB")]),
@@ -1032,6 +1043,16 @@ def medidas(fase, especie="clawd"):
 
 
 ANIMACOES = animacoes("clawd")
+
+# Bola de praia de quatro cores (girando dá pra ver ela rolar)
+BOLA = de_texto(["..RRYY..",
+                 ".RRRYYY.",
+                 "RRRRYYYY",
+                 "RRRWWYYY",
+                 "BBBWWGGG",
+                 "BBBBGGGG",
+                 ".BBBGGG.",
+                 "..BBGG.."], {"R": "#E8455A", "Y": "#FFD34D", "B": "#4FC3F7", "G": "#7BC67B", "W": BRANCO})
 
 # Efeitos que flutuam em volta dele
 _CORES_EFEITO = {"R": "#E8455A", "W": BRANCO, "Y": "#FFD34D", "Z": "#8FB4FF", "M": "#E8B26A",
