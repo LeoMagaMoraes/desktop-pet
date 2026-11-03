@@ -6,8 +6,7 @@
 
 ### **P**equeno **E**xplorador de **T**elas
 
-**O Clawd, o caranguejinho do Claude Code, e a turma dele morando na sua barra de tarefas
-(e passeando em cima das suas janelas).**
+**O Clawd, o caranguejinho do Claude Code, e a turma dele morando na sua barra de tarefas.**
 
 <img src="docs/turma.png" width="620" alt="Clawd, dragãozinho, tubarãozinho, pinguinzinho, patinho de borracha, fênix, corujinha, porquinho-da-índia e coala">
 
@@ -67,17 +66,6 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
    ```
 
 Pronto: dois cliques no atalho **Pet** e ele aparece em cima da barra de tarefas.
-
-### 🆕 Atualizações
-
-Na primeira vez que ele abre no dia, olha no GitHub se saiu versão nova. Tendo, ele avisa
-(*"Saiu versão nova do P.E.T.!"*) e aparece **Atualizar o P.E.T.** no fim do menu, com a lista do que mudou:
-confirmando, ele baixa, instala e reinicia sozinho, e conta a novidade quando volta. Dá pra procurar na hora em
-**Procurar atualização**.
-
-- Funciona com o projeto baixado pelo `git clone` (o passo 2 acima) e precisa do git instalado.
-- Ele só avança pra versão nova, nunca mistura nada: se você mexeu nos arquivos do pet ou tem commit seu que
-  não está no GitHub, ele avisa e pede pra atualizar pelo git. O save (`pet.json`) fica fora do git e não muda.
 
 <details>
 <summary>Outras formas de abrir</summary>
