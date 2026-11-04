@@ -1307,8 +1307,8 @@ ICONES = {
                         ".GGGGGG.",
                         "..GGGG..",
                         "...GG...",
-                        "W......W",
-                        "WWWWWWWW"], _CORES_ICONE),
+                        "D......D",
+                        "DDDDDDDD"], _CORES_ICONE),
     "lista": de_texto(["..DDDD..",             # prancheta com linhas (resumo, fiscal)
                        ".WWWWWW.",
                        ".WKKKKW.",

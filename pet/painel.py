@@ -1,19 +1,14 @@
 """Janelinha de Status: fase, XP, barrinhas dos status e tokens do Claude Code."""
 
+import sys
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import config, especies, necessidades, tokens
+from . import config, especies, necessidades, tema, tokens
 
-FUNDO = "#1F1E1D"
-TEXTO = "#F5F0E8"
-APAGADO = "#9A948C"
-VAZIO = "#3A3836"
-LARANJA = "#D97757"
-VERDE = "#7BC67B"
-AMARELO = "#F2C14E"
-VERMELHO = "#E8455A"
-AZUL = "#8FB4FF"
+# Cores do tema atual (tema.aplicar troca entre o escuro e o claro)
+FUNDO_PAINEL = TEXTO = APAGADO = VAZIO_PAINEL = LARANJA = VERDE = AMARELO = VERMELHO = AZUL = ""
+tema.aplicar(tema.PADRAO, sys.modules[__name__])
 SEGMENTOS = 10
 
 
@@ -49,10 +44,10 @@ class Painel:
         j.attributes("-toolwindow", True)
         j.attributes("-topmost", True)
         j.resizable(False, False)
-        j.config(bg=FUNDO)
+        j.config(bg=FUNDO_PAINEL)
         j.protocol("WM_DELETE_WINDOW", self.fechar)
         j.bind("<Escape>", lambda e: self.fechar())
-        self.canvas = tk.Canvas(j, width=self.largura, height=10, bg=FUNDO, highlightthickness=0)
+        self.canvas = tk.Canvas(j, width=self.largura, height=10, bg=FUNDO_PAINEL, highlightthickness=0)
         self.canvas.pack(padx=0, pady=0)
         self._desenhar()
         self._posicionar()
@@ -62,6 +57,13 @@ class Painel:
         if self.janela is not None:
             self.janela.destroy()
             self.janela = None
+
+    def recolorir(self):
+        """Trocou o tema com o painel aberto: pinta o fundo de novo (o resto redesenha sozinho)."""
+        if self.janela is not None:
+            self.janela.config(bg=FUNDO_PAINEL)
+            self.canvas.config(bg=FUNDO_PAINEL)
+            self._desenhar()
 
     def _loop(self):
         # Atualiza a cada segundo enquanto estiver aberto
@@ -137,9 +139,9 @@ class Painel:
         y = self._desenhar_tokens(c, y + e, pad)
         c.config(height=y + pad // 2)
 
-    def _texto(self, x, y, texto, cor=TEXTO, fonte=None, anchor="nw"):
+    def _texto(self, x, y, texto, cor=None, fonte=None, anchor="nw"):
         """Escreve e devolve a altura usada (quebra a linha se não couber)."""
-        item = self.canvas.create_text(x, y, anchor=anchor, fill=cor, font=fonte or self.fonte, text=texto,
+        item = self.canvas.create_text(x, y, anchor=anchor, fill=cor or TEXTO, font=fonte or self.fonte, text=texto,
                                        width=self.largura - 2 * x if anchor == "nw" else 0)
         x0, y0, x1, y1 = self.canvas.bbox(item)
         return y1 - y0
@@ -148,7 +150,7 @@ class Painel:
         """Tokens da sessão e da semana, com a meta. Uso deste PC, não o limite do plano."""
         e = self.m.escala
         cc = self.m.cc
-        c.create_line(pad, y, self.largura - pad, y, fill=VAZIO, width=max(1, e // 2))
+        c.create_line(pad, y, self.largura - pad, y, fill=VAZIO_PAINEL, width=max(1, e // 2))
         y += 2 * e
         y += self._texto(pad, y, "🤖 Claude Code · este PC", fonte=self.fonte_titulo) + e
 
@@ -205,9 +207,9 @@ class Painel:
         for i in range(SEGMENTOS):
             x0 = x + i * self.seg_w
             self.canvas.create_rectangle(x0, y, x0 + self.seg_w - 2, y + self.seg_h,
-                                         fill=cor if i < cheios else VAZIO, width=0)
+                                         fill=cor if i < cheios else VAZIO_PAINEL, width=0)
 
     def _barra(self, x, y, largura, fracao, cor):
-        self.canvas.create_rectangle(x, y, x + largura, y + self.seg_h, fill=VAZIO, width=0)
+        self.canvas.create_rectangle(x, y, x + largura, y + self.seg_h, fill=VAZIO_PAINEL, width=0)
         self.canvas.create_rectangle(x, y, x + largura * max(0.0, min(1.0, fracao)), y + self.seg_h,
                                      fill=cor, width=0)

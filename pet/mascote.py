@@ -10,7 +10,8 @@ import time
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 
-from . import config, especies, fisica, interacao, necessidades, sons, tela, tokens
+from . import config, especies, fisica, interacao, necessidades, sons, tela, tema, tokens
+from . import menu as modulo_menu, painel as modulo_painel
 from .atualizacao import Atualizacao
 from .balao import Balao
 from .bola import Brincadeira
@@ -81,6 +82,7 @@ class Mascote:
             vel_max=config.VEL_MAX * self.k)
 
         self._montar_janela()
+        self.aplicar_tema()
         self.balao = Balao(self.root, config.COR_CHAVE, self.escala)
         self.menu = MenuClawd(self)
 
@@ -209,6 +211,18 @@ class Mascote:
             self.falar("Não entendi essa data 🤔\nTenta algo como 25/03", 3)
             return
         self.falar("Anotado! 🎂" if texto.strip() else "Tá bom, sem festa 🥲", 2)
+        self.salvar()
+
+    def aplicar_tema(self):
+        """Põe as cores do tema salvo no menu e nas janelinhas."""
+        tema.aplicar(self.estado.dados.get("tema"), modulo_menu, modulo_painel)
+
+    def alternar_tema(self):
+        """Modo escuro <-> claro (pelo menu). O menu se redesenha sozinho; o painel aberto também."""
+        d = self.estado.dados
+        d["tema"] = "claro" if d.get("tema") == "escuro" else "escuro"
+        self.aplicar_tema()
+        self.painel.recolorir()
         self.salvar()
 
     def _reinstalar_hooks(self):

@@ -5,23 +5,18 @@ páginas dentro do próprio menu, com um "Voltar" no topo.
 Fecha com Esc, clicando fora ou escolhendo uma opção.
 """
 
+import sys
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import especies, lembretes, loja, necessidades, pixelart, tela, tokens
+from . import especies, lembretes, loja, necessidades, pixelart, tela, tema, tokens
 from .sprites import grade_para_imagem
 
-FUNDO = "#262422"
-BORDA = "#45403B"
-DESTAQUE = "#3A3532"
-TEXTO = "#F5F0E8"
-APAGADO = "#9A948C"
-SECAO = "#B8A99A"
-LARANJA = "#D97757"
-VERMELHO = "#E8455A"
-VERDE = "#7BC67B"
-AMARELO = "#F2C14E"
-VAZIO = "#45403B"
+# Cores do tema atual (tema.aplicar troca entre o escuro e o claro)
+FUNDO = BORDA = DESTAQUE = TEXTO = APAGADO = SECAO = LARANJA = VERMELHO = VERDE = AMARELO = VAZIO = ""
+PERIGO = OK = CAMPO = BOLINHA = ""
+CONTORNO_CLARO = "#CFC6B8"      # contorno dos ícones no modo claro
+tema.aplicar(tema.PADRAO, sys.modules[__name__])
 
 
 def cor_do_valor(valor):
@@ -45,7 +40,12 @@ class MenuClawd:
         self.fonte_pequena = tkfont.Font(root=root, family="Segoe UI", size=8)
         self.fonte_secao = tkfont.Font(root=root, family="Segoe UI", size=8, weight="bold")
         escala_icone = max(2, e - 2)
-        self.icones = {nome: grade_para_imagem(root, g, escala_icone) for nome, g in pixelart.ICONES.items()}
+        # Dois jogos de ícones: no modo claro eles ganham um contorninho pra não sumir no fundo
+        self._icones = {
+            "escuro": {nome: grade_para_imagem(root, g, escala_icone) for nome, g in pixelart.ICONES.items()},
+            "claro": {nome: grade_para_imagem(root, pixelart.com_contorno(g, CONTORNO_CLARO), escala_icone)
+                      for nome, g in pixelart.ICONES.items()},
+        }
         self.largura = 64 * e
         self._retratos = {}              # miniatura de cada bicho em cada fase
 
@@ -54,6 +54,10 @@ class MenuClawd:
     @property
     def aberto(self):
         return self.janela is not None
+
+    @property
+    def icones(self):
+        return self._icones["claro" if self.m.estado.dados.get("tema") == "claro" else "escuro"]
 
     def abrir(self, x, y):
         self.fechar()
@@ -110,6 +114,7 @@ class MenuClawd:
         for filho in j.winfo_children():
             filho.destroy()
         e = self.e
+        j.config(bg=BORDA)
         self.corpo = tk.Frame(j, bg=FUNDO, padx=e, pady=e)
         self.corpo.pack(padx=1, pady=1, fill="both")
         tk.Frame(self.corpo, width=self.largura, height=0, bg=FUNDO).pack()   # largura mínima
@@ -140,7 +145,7 @@ class MenuClawd:
         if tocando:
             # Lembrete tocando: as respostas dele vêm primeiro
             self._secao("⏰ " + tocando["texto"][:40])
-            self._item("relogio", "Feito!", m.lembretes.dispensar, destaque_cor="#2E4A2E")
+            self._item("relogio", "Feito!", m.lembretes.dispensar, destaque_cor=OK)
             self._item("relogio", f"Me lembra em {lembretes.ADIAR_MINUTOS} min", m.lembretes.adiar)
 
         self._secao("CUIDAR")
@@ -153,7 +158,7 @@ class MenuClawd:
             self._item("lua", "Dormir", m.dormir, direita=barra(s["energia"]))
         if m.pode_renascer():
             vezes = m.estado.dados.get("renascimentos", 0)
-            self._item("fenix", "Renascer", m.renascer_de_vontade, destaque_cor="#5A2E2E",
+            self._item("fenix", "Renascer", m.renascer_de_vontade, destaque_cor=PERIGO,
                        direita=lambda pai: self._etiqueta(pai, f"🔥 {vezes}x" if vezes else "fase máxima", LARANJA))
         if ativo and m.estado.dados["doente"]:
             self._item("pilula", "Dar remédio", m.dar_remedio, destaque_cor=VERMELHO,
@@ -189,18 +194,19 @@ class MenuClawd:
                    direita=lambda pai: self._etiqueta(pai, f"{esp.nome}  ›"))
         ligado = m.estado.dados["modo_tamagotchi"]
         self._chave("ovo", "Modo Tamagotchi", ligado, lambda: m.tama.mudar_modo(not ligado))
+        self._chave("lua", "Modo escuro", m.estado.dados["tema"] == "escuro", m.alternar_tema)
 
         self._separador()
         at = m.atualizacao
         if at.tem_novidade:
             n = at.situacao.get("novidades", 0)
-            self._item("baixar", "Atualizar o P.E.T.", at.atualizar, negrito=True, destaque_cor="#2E4A2E",
+            self._item("baixar", "Atualizar o P.E.T.", at.atualizar, negrito=True, destaque_cor=OK,
                        direita=lambda pai: self._etiqueta(pai, f"{n} novidade{'s' if n > 1 else ''}", VERDE))
         else:
             rotulo = at.rotulo()
             self._item("baixar", "Procurar atualização", at.procurar_agora,
                        direita=(lambda pai: self._etiqueta(pai, rotulo)) if rotulo else None)
-        self._item("porta", "Sair", m.sair, destaque_cor="#5A2E2E")
+        self._item("porta", "Sair", m.sair, destaque_cor=PERIGO)
 
     def _pagina_monitor(self):
         self._voltar("Monitor")
@@ -266,7 +272,7 @@ class MenuClawd:
             quando = lembretes.formatar(lembretes.quando_de(l), repetir=l.get("repetir"))
             texto = l["texto"] if len(l["texto"]) <= 28 else l["texto"][:27] + "…"
             self._linha("relogio", texto, lambda ident=l["id"]: self._apagar_lembrete(ident),
-                        destaque_cor="#5A2E2E",
+                        destaque_cor=PERIGO,
                         direita=lambda pai, q=quando: self._etiqueta(pai, q))
         if not proximos:
             self._nota("Nenhum lembrete marcado. Ele te avisa acenando, com um balão e um alarminho; "
@@ -396,8 +402,8 @@ class MenuClawd:
                  justify="left", wraplength=self.largura - 4 * self.e, padx=2 * self.e,
                  pady=self.e // 2).pack(fill="x")
 
-    def _etiqueta(self, pai, texto, cor=APAGADO):
-        return tk.Label(pai, text=texto, font=self.fonte_pequena, fg=cor, bg=pai["bg"])
+    def _etiqueta(self, pai, texto, cor=None):
+        return tk.Label(pai, text=texto, font=self.fonte_pequena, fg=cor or APAGADO, bg=pai["bg"])
 
     def _mini_barra(self, pai, valor):
         """Cinco quadradinhos + o número, do lado direito do item."""
@@ -413,9 +419,10 @@ class MenuClawd:
                  width=3, anchor="e").pack(side="left")
         return quadro
 
-    def _linha(self, icone, texto, ao_clicar, negrito=False, destaque_cor=DESTAQUE, direita=None, imagem=None):
+    def _linha(self, icone, texto, ao_clicar, negrito=False, destaque_cor=None, direita=None, imagem=None):
         """Uma linha clicável com ícone (ou outra imagem), texto e algo opcional na direita."""
         e = self.e
+        destaque_cor = destaque_cor or DESTAQUE      # lido agora: muda com o tema
         linha = tk.Frame(self.corpo, bg=FUNDO, padx=2 * e, pady=e, cursor="hand2")
         linha.pack(fill="x")
         tk.Label(linha, image=imagem or self.icones[icone], bg=FUNDO,
@@ -427,7 +434,7 @@ class MenuClawd:
         self._interativo(linha, ao_clicar, destaque_cor)
         return linha
 
-    def _item(self, icone, texto, acao, fecha=True, negrito=False, destaque_cor=DESTAQUE, direita=None):
+    def _item(self, icone, texto, acao, fecha=True, negrito=False, destaque_cor=None, direita=None):
         def clicar():
             if fecha:
                 self.fechar()
@@ -453,7 +460,7 @@ class MenuClawd:
         c.create_oval(w - h, 0, w, h, fill=fundo, width=0)
         c.create_rectangle(r, 0, w - r, h, fill=fundo, width=0)
         bola = w - h + 2 if ligado else 2
-        c.create_oval(bola, 2, bola + h - 4, h - 2, fill=TEXTO, width=0)
+        c.create_oval(bola, 2, bola + h - 4, h - 2, fill=BOLINHA, width=0)
         return c
 
     def _voltar(self, titulo):

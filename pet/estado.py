@@ -59,6 +59,7 @@ PADRAO = {
         "atualizado": None,
         "previsao_avisada": None,    # dia em que já avisou da chuva de manhã
     },
+    "tema": "escuro",           # cores do menu e das janelinhas: "escuro" ou "claro"
     "andar_nas_janelas": True,  # pousa, passeia e pula em cima das janelas abertas
     "lembretes": [],            # [{"id", "texto", "quando" (ISO), "repetir": None ou "diario"}]
     "monitor": None,            # nome do monitor onde ele mora (ex.: \\.\DISPLAY2)

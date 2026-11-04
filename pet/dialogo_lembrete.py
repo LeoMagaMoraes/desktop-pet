@@ -3,8 +3,7 @@
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import lembretes, tela
-from .menu import APAGADO, BORDA, DESTAQUE, FUNDO, LARANJA, TEXTO, VERDE, VERMELHO
+from . import lembretes, menu as cores, tela        # as cores do tema atual moram no menu
 
 EXEMPLOS = "Ex.: 15:30 · amanhã 9h · daqui a 20 min · sexta 14h · 25/12 8h · todo dia 9h"
 
@@ -26,7 +25,7 @@ class DialogoLembrete:
         m, e = self.m, self.m.escala
         j = self.janela = tk.Toplevel(m.root)
         j.title("Novo lembrete")
-        j.config(bg=FUNDO, padx=3 * e, pady=3 * e)
+        j.config(bg=cores.FUNDO, padx=3 * e, pady=3 * e)
         j.attributes("-topmost", True)
         j.resizable(False, False)
         j.protocol("WM_DELETE_WINDOW", self.fechar)
@@ -38,11 +37,11 @@ class DialogoLembrete:
         pequena = tkfont.Font(root=m.root, family="Segoe UI", size=8)
 
         def rotulo(texto):
-            tk.Label(j, text=texto, font=negrito, fg=TEXTO, bg=FUNDO, anchor="w").pack(fill="x", pady=(e, 0))
+            tk.Label(j, text=texto, font=negrito, fg=cores.TEXTO, bg=cores.FUNDO, anchor="w").pack(fill="x", pady=(e, 0))
 
         def campo():
-            c = tk.Entry(j, font=fonte, width=36, bg=DESTAQUE, fg=TEXTO, insertbackground=TEXTO,
-                         relief="flat", highlightthickness=1, highlightbackground=BORDA, highlightcolor=LARANJA)
+            c = tk.Entry(j, font=fonte, width=36, bg=cores.CAMPO, fg=cores.TEXTO, insertbackground=cores.TEXTO,
+                         relief="flat", highlightthickness=1, highlightbackground=cores.BORDA, highlightcolor=cores.LARANJA)
             c.pack(fill="x", ipady=e // 2, pady=(e // 2, 0))
             return c
 
@@ -50,15 +49,15 @@ class DialogoLembrete:
         self.texto = campo()
         rotulo("Quando?")
         self.quando = campo()
-        self.previa = tk.Label(j, text=EXEMPLOS, font=pequena, fg=APAGADO, bg=FUNDO, anchor="w",
+        self.previa = tk.Label(j, text=EXEMPLOS, font=pequena, fg=cores.APAGADO, bg=cores.FUNDO, anchor="w",
                                justify="left", wraplength=60 * e)
         self.previa.pack(fill="x", pady=(e // 2, 0))
         self.quando.bind("<KeyRelease>", lambda ev: self._atualizar_previa())
 
-        botoes = tk.Frame(j, bg=FUNDO)
+        botoes = tk.Frame(j, bg=cores.FUNDO)
         botoes.pack(fill="x", pady=(2 * e, 0))
-        for texto, cor, acao in (("Lembrar ⏰", LARANJA, self._salvar), ("Cancelar", BORDA, self.fechar)):
-            b = tk.Label(botoes, text=texto, font=negrito, fg=TEXTO, bg=cor, padx=3 * e, pady=e,
+        for texto, cor, acao in (("Lembrar ⏰", cores.LARANJA, self._salvar), ("Cancelar", cores.BORDA, self.fechar)):
+            b = tk.Label(botoes, text=texto, font=negrito, fg=cores.TEXTO, bg=cor, padx=3 * e, pady=e,
                          cursor="hand2")
             b.pack(side="right", padx=(e, 0))
             b.bind("<Button-1>", lambda ev, a=acao: a())
@@ -82,27 +81,27 @@ class DialogoLembrete:
     def _atualizar_previa(self):
         escrito = self.quando.get().strip()
         if not escrito:
-            self.previa.config(text=EXEMPLOS, fg=APAGADO)
+            self.previa.config(text=EXEMPLOS, fg=cores.APAGADO)
             return
         quando, repetir = lembretes.interpretar(escrito)
         if quando is None:
-            self.previa.config(text="Não entendi esse horário 🤔\n" + EXEMPLOS, fg=VERMELHO)
+            self.previa.config(text="Não entendi esse horário 🤔\n" + EXEMPLOS, fg=cores.VERMELHO)
         else:
-            self.previa.config(text="→ " + lembretes.formatar(quando, repetir=repetir), fg=VERDE)
+            self.previa.config(text="→ " + lembretes.formatar(quando, repetir=repetir), fg=cores.VERDE)
 
     def _salvar(self):
         texto = self.texto.get().strip()
         quando, repetir = lembretes.interpretar(self.quando.get())
         if not texto:
             self.texto.focus_set()
-            self.previa.config(text="Escreve o que é pra lembrar ✏️", fg=VERMELHO)
+            self.previa.config(text="Escreve o que é pra lembrar ✏️", fg=cores.VERMELHO)
             return
         if quando is None:
             self.quando.focus_set()
             if self.quando.get().strip():
                 self._atualizar_previa()
             else:
-                self.previa.config(text="Falta dizer quando ⏰\n" + EXEMPLOS, fg=VERMELHO)
+                self.previa.config(text="Falta dizer quando ⏰\n" + EXEMPLOS, fg=cores.VERMELHO)
             return
         self.fechar()
         self.m.lembretes.adicionar(texto, quando, repetir)

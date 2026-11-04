@@ -16,7 +16,7 @@ cai duro quando os testes quebram e acena quando o Claude precisa de você.
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dependências](https://img.shields.io/badge/depend%C3%AAncias-nenhuma-7BC67B)
-![Testes](https://img.shields.io/badge/testes-318%20passando-7BC67B)
+![Testes](https://img.shields.io/badge/testes-328%20passando-7BC67B)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-hooks-D97757)
 
 [Instalar](#-instalar) · [Usar](#-usar) · [Janelas](#-andando-nas-janelas) · [Tamagotchi](#-tamagotchi) · [Pets](#-pets) · [Clima](#-clima) · [Claude Code](#-integração-com-o-claude-code) · [Sprites](#-sprites-próprios) · [Estrutura](#-estrutura)
@@ -94,6 +94,7 @@ Só abre um pet por vez. Pra fechar: clique direito → **Sair**.
 | **Soltar em outro monitor** | Passa a morar naquele monitor |
 | **Soltar em cima de uma janela** | Pousa na borda dela e passeia por lá |
 | **Menu → Brincar** | Cai uma bola ⚽: ele corre atrás e chuta (veja abaixo) |
+| **Menu → Modo escuro** | Troca o menu, o painel de Status e a janelinha de lembrete entre o tema escuro e o claro |
 
 <table>
   <tr>
@@ -375,8 +376,8 @@ O ícone e as imagens deste README saem da mesma pixel art: `python ferramentas/
 python -m unittest discover -s tests -t .
 ```
 
-São 318 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
-contagem de tokens, o menu, os pets, os lembretes (que entendem "amanhã 9h"), as datas especiais, a loja, o fiscal do git (com repositórios de mentira), a bola, a atualização (com um "GitHub" de mentira), as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
+São 328 testes: física, mouse, save, regras do tamagotchi, monitores, o script do hook rodando de verdade,
+contagem de tokens, o menu, os pets, os lembretes (que entendem "amanhã 9h"), as datas especiais, a loja, o fiscal do git (com repositórios de mentira), a bola, a atualização (com um "GitHub" de mentira), os temas, as janelas (com janelas de mentira), o clima (com uma resposta real do Open-Meteo, sem acessar a rede) e as reações
 do Clawd. Os que abrem janela usam uma pasta temporária no lugar do seu `~/.claude`.
 
 ## 🗂 Estrutura
@@ -421,6 +422,7 @@ pet/
   loja.py             acessórios comprados com XP
   bola.py             a bola (janela própria com a física do pet) e o jogo de chutar
   atualizacao.py      versão nova no GitHub: avisa, baixa (git fetch), instala e reinicia
+  tema.py             cores do modo escuro e do modo claro
   estado.py           save em pet.json
   sons.py             sonzinhos com winsound
   tela.py             API do Windows: DPI, monitores, janelas abertas, tempo ocioso, janela em foco
@@ -445,6 +447,7 @@ O save fica em `pet.json` e os erros em `pet.log`, ambos na pasta do projeto (fo
 - [x] **Extra:** andar em cima das janelas (pousar, pular, pegar carona)
 - [x] **Extra:** brincar de bola e a Fênix anciã renascendo como ovo
 - [x] **Extra:** atualização automática (avisa uma vez por dia, instala e reinicia)
+- [x] **Extra:** modo escuro e modo claro
 - [x] **Fase 5:** lembretes, datas especiais, hora de dormir, tela cheia, fiscal do git, resumo do dia, música e loja
 - [ ] **Depois:** conversar com o pet pela API do Claude (duplo clique)
 
